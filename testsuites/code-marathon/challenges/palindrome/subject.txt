@@ -1,0 +1,26 @@
+Subject: Palindrome
+
+Write a function that checks if a string is a palindrome.
+
+Prototype:
+    int is_palindrome(const char *s);
+
+Parameters:
+    s: null-terminated string to check
+
+Returns:
+    1 if the string is a palindrome, 0 otherwise.
+
+A palindrome is a string that reads the same forwards and backwards.
+Space characters are not ignored — "nurses run" is NOT a palindrome.
+The check is case-sensitive — "Racecar" is NOT a palindrome.
+An empty string is considered a palindrome.
+
+Examples:
+    is_palindrome("")                  -> 1
+    is_palindrome("a")                 -> 1
+    is_palindrome("racecar")           -> 1
+    is_palindrome("hello")             -> 0
+    is_palindrome("amanaplanacanalpanama") -> 1
+
+Allowed functions: none (standard library only)

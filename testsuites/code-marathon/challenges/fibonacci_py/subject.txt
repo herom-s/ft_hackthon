@@ -1,0 +1,22 @@
+Subject: Fibonacci (Python)
+
+Write a function that returns the n-th Fibonacci number.
+
+Function signature:
+    def fibonacci(n: int) -> int:
+
+Parameters:
+    n: zero-based index in the Fibonacci sequence
+
+Returns:
+    The n-th Fibonacci number.
+    fibonacci(0) = 0
+    fibonacci(1) = 1
+    fibonacci(n) = fibonacci(n-1) + fibonacci(n-2)
+
+Examples:
+    fibonacci(0)  -> 0
+    fibonacci(1)  -> 1
+    fibonacci(10) -> 55
+    fibonacci(20) -> 6765
+    fibonacci(30) -> 832040

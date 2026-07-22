@@ -1,0 +1,28 @@
+Subject: FizzBuzz
+
+Write a function that prints the FizzBuzz game result for a given number.
+
+Prototype:
+    void fizzbuzz(int n, char *out);
+
+Parameters:
+    n: the number to evaluate
+    out: buffer to write the result (must be at least 12 bytes)
+
+Returns:
+    Nothing, writes the result into the out buffer.
+
+Rules:
+    - If n is divisible by 3 and 5, write "FizzBuzz"
+    - If n is divisible by 3, write "Fizz"
+    - If n is divisible by 5, write "Buzz"
+    - Otherwise, write the number as a string (e.g., "7")
+
+Examples:
+    fizzbuzz(15, buf)  -> buf = "FizzBuzz"
+    fizzbuzz(3, buf)   -> buf = "Fizz"
+    fizzbuzz(5, buf)   -> buf = "Buzz"
+    fizzbuzz(7, buf)   -> buf = "7"
+    fizzbuzz(1, buf)   -> buf = "1"
+
+Allowed functions: none (standard library only)

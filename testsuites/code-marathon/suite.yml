@@ -1,0 +1,23 @@
+name: code-marathon
+language: c
+starts_at: "2026-07-08T00:00:00Z"
+default_timeout_seconds: 10
+default_memory_mb: 256
+languages:
+  c:
+    extension: ".c"
+    collect: "*.c"
+    test_runner: "test_runner.c"
+    build: "gcc -O2 -o {binary} -lm {workspace_files} {suite_files}"
+    run: "{binary}"
+  python:
+    extension: ".py"
+    collect: "*.py"
+    test_runner: "test_runner.py"
+    build: ""
+    run: "python3 {suite_files} {workspace_files}"
+detect:
+  - challenge.h
+  - fizzbuzz
+build: ""
+run: ""

@@ -1,0 +1,27 @@
+Subject: Prime
+
+Write a function that checks if a number is prime.
+
+Prototype:
+    int is_prime(int n);
+
+Parameters:
+    n: integer to check
+
+Returns:
+    1 if n is a prime number, 0 otherwise.
+
+A prime number is a positive integer greater than 1 that has no
+positive divisors other than 1 and itself.
+Numbers less than 2 are not prime.
+
+Examples:
+    is_prime(2)   -> 1
+    is_prime(3)   -> 1
+    is_prime(4)   -> 0
+    is_prime(17)  -> 1
+    is_prime(1)   -> 0
+    is_prime(97)  -> 1
+    is_prime(100) -> 0
+
+Allowed functions: none (standard library only)
