@@ -38,15 +38,7 @@ func NewAPIClient(baseURL string) *APIClient {
 		baseURL = "https://localhost:8443/api/v1"
 	}
 
-	transport := &http.Transport{
-		TLSHandshakeTimeout:   30 * time.Second,
-		MaxIdleConns:          10,
-		IdleConnTimeout:       30 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-
 	client := resty.New().
-		SetTransport(transport).
 		SetBaseURL(baseURL).
 		SetTimeout(time.Duration(defaultAPITimeout) * time.Second)
 
