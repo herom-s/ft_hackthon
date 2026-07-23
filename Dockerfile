@@ -15,12 +15,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-api   ./cmd/api && \
     CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-worker ./cmd/worker && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-cli    ./cmd/ft_hackthon
+    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-cli    ./cmd/ft_hackthon && \
+    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/healthcheck       ./cmd/healthcheck
 
 # API runtime stage
 FROM gcr.io/distroless/static-debian12:nonroot AS api
 WORKDIR /app
 COPY --from=builder /app/bin/ft_hackthon-api /app/ft_hackthon-api
+COPY --from=builder /app/bin/healthcheck /app/healthcheck
 EXPOSE 8000
 USER nonroot:nonroot
 ENTRYPOINT ["/app/ft_hackthon-api"]
