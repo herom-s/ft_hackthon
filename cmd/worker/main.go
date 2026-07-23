@@ -35,7 +35,7 @@ func main() {
 	w := worker.NewWorker(db)
 	w.Start()
 
-	fmt.Println("\n+ Worker is running and listening for jobs...")
+	fmt.Println("\n✓ Worker is running and listening for jobs...")
 	fmt.Println("  Press Ctrl+C to stop")
 
 	// Wait for interrupt signal
@@ -46,5 +46,5 @@ func main() {
 
 	fmt.Println("\n\nShutting down worker...")
 	w.Stop()
-	fmt.Println("+ Worker stopped")
+	fmt.Println("✓ Worker stopped")
 }

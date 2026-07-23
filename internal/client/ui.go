@@ -21,7 +21,7 @@ func (ui *TerminalUI) PrintStatusUpdate(status *StatusResponse) {
 	message := getStatusMessage(status.Status)
 	fmt.Printf("STATUS: %s\n", message)
 	if status.Message != "" {
-		fmt.Printf("  -> %s\n", status.Message)
+		fmt.Printf("  \u2192 %s\n", status.Message)
 	}
 }
 
@@ -33,9 +33,9 @@ func (ui *TerminalUI) PrintGradeResult(result *GradeResult) {
 	fmt.Println(strings.Repeat("=", width))
 	fmt.Println()
 
-	parserStatus := "YES"
+	parserStatus := "✓ YES"
 	if !result.ParserSuccess {
-		parserStatus = "NO"
+		parserStatus = "✗ NO"
 	}
 	ui.printTableRow("Parser Success", parserStatus, width)
 
@@ -57,9 +57,9 @@ func (ui *TerminalUI) PrintGradeResult(result *GradeResult) {
 		fmt.Println()
 		ui.PrintHeader("Challenge Results")
 		for _, ch := range result.Challenges {
-			status := "+"
+			status := "✓"
 			if !ch.Passed {
-				status = "-"
+				status = "✗"
 			}
 			scoreStr := fmt.Sprintf("%d/%d pts", ch.Points, ch.Points)
 			if !ch.Passed {
@@ -74,7 +74,7 @@ func (ui *TerminalUI) PrintGradeResult(result *GradeResult) {
 	}
 
 	fmt.Println()
-	fmt.Println("+ Grading completed successfully!")
+	fmt.Println("✓ Grading completed successfully!")
 }
 
 func (ui *TerminalUI) printTableRow(label, value string, width int) {
@@ -123,11 +123,11 @@ func (ui *TerminalUI) PrintProgress(current, total int, prefix string) {
 func getStatusSymbol(status string) string {
 	switch status {
 	case "completed":
-		return "+"
+		return "✓"
 	case "failed", "error":
-		return "-"
+		return "✗"
 	default:
-		return "*"
+		return "•"
 	}
 }
 

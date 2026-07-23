@@ -358,7 +358,6 @@ diff <job_id>      # View submitted code
 leaderboard <hack> # View top scorers
 plagiarism <hack>  # Check for duplicates
 report             # Submission analytics and trends
-hooks              # Manage git hooks
 logout             # Clear token
 whoami             # Show current user
 rating             # Show Elo rating
@@ -373,7 +372,6 @@ help               # Show help
 - Real-time monitoring (WebSocket)
 - Batch submission
 - Submission analytics
-- Git hooks for automation
 - CI/CD support (non-interactive, JSON output)
 
 ---
@@ -598,7 +596,7 @@ kill -9 <PID>
 - [x] Add CI/CD integration (JSON output, non-interactive mode, exit codes)
 - [x] Add batch submission support
 - [x] Add submission analytics and reports
-- [x] Add git hooks for automation
+
 
 ---
 

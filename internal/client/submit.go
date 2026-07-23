@@ -56,7 +56,7 @@ func (sm *SubmitManager) SubmitGradeJob() error {
 		return fmt.Errorf("submission failed: %w", err)
 	}
 
-	fmt.Printf("+ Job ID: %s\n\n", submitResp.JobID)
+	fmt.Printf("✓ Job ID: %s\n\n", submitResp.JobID)
 
 	fmt.Println("Waiting for grading to complete...")
 	return sm.PollStatus(submitResp.JobID)
@@ -94,9 +94,9 @@ func (sm *SubmitManager) PromptSuiteSelection() (string, error) {
 	fmt.Println()
 	fmt.Println("Available hackathons:")
 	for _, s := range suitesResp.Suites {
-		status := "+"
+		status := "✓"
 		if !s.Active {
-			status = "-"
+			status = "✗"
 		}
 		window := ""
 		if s.StartsAt != "" || s.EndsAt != "" {
@@ -132,16 +132,16 @@ func (sm *SubmitManager) PromptSuiteSelection() (string, error) {
 		}
 
 		if matched == nil {
-			fmt.Printf("- Unknown hackathon %q.\n", input)
+			fmt.Printf("✗ Unknown hackathon %q.\n", input)
 			continue
 		}
 
 		if !matched.Active {
-			fmt.Printf("- %q is not accepting submissions: %s\n", input, matched.Message)
+			fmt.Printf("✗ %q is not accepting submissions: %s\n", input, matched.Message)
 			continue
 		}
 
-		fmt.Printf("+ Registered for %q hackathon. Test suite configured.\n", input)
+		fmt.Printf("✓ Registered for %q hackathon. Test suite configured.\n", input)
 
 		// Download challenge subjects to ~/ft_hackthon/<hackathon>/
 		sm.downloadChallengeSubjects(input)
@@ -214,7 +214,7 @@ func (sm *SubmitManager) PollStatus(jobID string) error {
 			}
 
 			if statusResp.Status == "failed" || statusResp.Status == "error" {
-				fmt.Printf("\n- Grading failed: %s\n", statusResp.Message)
+				fmt.Printf("\n✗ Grading failed: %s\n", statusResp.Message)
 				return fmt.Errorf("grading job failed with status: %s", statusResp.Status)
 			}
 

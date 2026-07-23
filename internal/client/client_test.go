@@ -266,12 +266,12 @@ func TestStatusSymbol(t *testing.T) {
 		status   string
 		expected string
 	}{
-		{"queued", "*"},
-		{"processing", "*"},
-		{"completed", "+"},
-		{"failed", "-"},
-		{"error", "-"},
-		{"unknown", "*"},
+		{"queued", "\u2022"},
+		{"processing", "\u2022"},
+		{"completed", "\u2713"},
+		{"failed", "\u2717"},
+		{"error", "\u2717"},
+		{"unknown", "\u2022"},
 	}
 
 	for _, tt := range tests {

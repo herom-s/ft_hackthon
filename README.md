@@ -63,7 +63,7 @@ cmd/
   worker/main.go           # Worker entry point
   ft_hackthon/             # CLI (main.go, repl.go, helpers.go)
 internal/
-  client/                  # API client (api.go, auth.go, submit.go, ui.go, websocket.go, batch.go, analytics.go, hooks.go)
+  client/                  # API client (api.go, auth.go, submit.go, ui.go, websocket.go, batch.go, analytics.go)
   config/                  # Config management (config.go, server.go)
   database/                # DB interface + Postgres + InMemory + migrations
   gitea/                   # Gitea API client + interface
@@ -110,7 +110,6 @@ docs/                      # Full documentation
 | `plagiarism` | Check for duplicate submissions |
 | `diff` | View code submitted for a grading job |
 | `report` | Show submission analytics and trends |
-| `hooks` | Manage git hooks for auto-submission |
 | `whoami` | Show current user |
 | `rating` | Display your current Elo rating |
 | `logout` | Clear stored session |

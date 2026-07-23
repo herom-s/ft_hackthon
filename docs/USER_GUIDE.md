@@ -196,22 +196,6 @@ ft_hackthon report factorial
 ft_hackthon report --days=7 --trend
 ```
 
-### Git Hooks
-
-```bash
-# Install pre-push hook (auto-submits when you push)
-ft_hackthon hooks install pre-push
-
-# Install pre-commit hook
-ft_hackthon hooks install pre-commit
-
-# List installed hooks
-ft_hackthon hooks list
-
-# Remove a hook
-ft_hackthon hooks uninstall pre-push
-```
-
 ### System Commands
 
 ```bash
@@ -413,16 +397,7 @@ ft_hackthon report
 ft_hackthon report --trend --days=7
 ```
 
-### 5. Automated Submission with Git Hooks
-
-Install a pre-push hook to auto-submit when you push:
-
-```bash
-ft_hackthon hooks install pre-push
-# Now every `git push` will also trigger ft_hackthon grademe
-```
-
-### 6. Batch Processing
+### 5. Batch Processing
 
 Submit multiple projects at once:
 
@@ -589,7 +564,7 @@ ft_hackthon help login
 ft_hackthon help grademe
 ft_hackthon help batch
 ft_hackthon help report
-ft_hackthon help hooks
+ft_hackthon help report
 ```
 
 ### Version Information
@@ -636,5 +611,4 @@ A: Yes! Use `--non-interactive` and `--json` flags for pipeline integration.
 **Q: How do I submit multiple projects at once?**
 A: Use `ft_hackthon batch <dir1> <dir2> ...` to submit multiple directories.
 
-**Q: Can I auto-submit on git push?**
-A: Yes, run `ft_hackthon hooks install pre-push` to install a git hook.
+

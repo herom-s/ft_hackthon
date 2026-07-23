@@ -42,8 +42,7 @@ ft_hackthon/
 │   │   ├── api.go, auth.go, submit.go, ui.go
 │   │   ├── websocket.go        # WebSocket client
 │   │   ├── batch.go            # Batch submission logic
-│   │   ├── analytics.go        # Submission analytics/reports
-│   │   └── hooks.go            # Git hooks management
+│   │   └── analytics.go        # Submission analytics/reports
 │   ├── config/config.go        # Config management
 │   ├── database/
 │   │   ├── database.go         # Interface + InMemoryDB

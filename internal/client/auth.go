@@ -83,8 +83,8 @@ func (am *AuthManager) Login() (*LoginResponse, error) {
 		return nil, fmt.Errorf("failed to save config: %w", err)
 	}
 
-	fmt.Printf("+ Successfully logged in as %s\n", resp.User)
-	fmt.Printf("+ Token saved to ~/.ft_hackthon/config.json\n")
+	fmt.Printf("✓ Successfully logged in as %s\n", resp.User)
+	fmt.Printf("✓ Token saved to ~/.ft_hackthon/config.json\n")
 	return resp, nil
 }
 
@@ -144,8 +144,8 @@ func (am *AuthManager) Register() (*LoginResponse, error) {
 		return nil, fmt.Errorf("failed to save config: %w", err)
 	}
 
-	fmt.Printf("+ Successfully registered as %s\n", resp.User)
-	fmt.Printf("+ Token saved to ~/.ft_hackthon/config.json\n")
+	fmt.Printf("✓ Successfully registered as %s\n", resp.User)
+	fmt.Printf("✓ Token saved to ~/.ft_hackthon/config.json\n")
 	return &resp, nil
 }
 
@@ -154,7 +154,7 @@ func (am *AuthManager) Logout() error {
 	if err := config.ClearToken(); err != nil {
 		return fmt.Errorf("failed to logout: %w", err)
 	}
-	fmt.Println("+ Successfully logged out")
+	fmt.Println("✓ Successfully logged out")
 	return nil
 }
 

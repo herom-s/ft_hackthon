@@ -26,7 +26,6 @@ Located in `cmd/ft_hackthon/repl.go` and `cmd/ft_hackthon/main.go`, the command 
 - `diff` - View code submitted for a job
 - `plagiarism` - Check for duplicate submissions
 - `report` - Show submission analytics and trends
-- `hooks` - Manage git hooks for auto-submission
 - `rating` - Display current Elo rating
 - `logout` - Clear authentication
 - `whoami` - Display current user
@@ -127,17 +126,6 @@ sm.GenerateReport(client.ReportOptions{
     DaysBack:  30,
     ShowTrend: true,
 })
-```
-
-#### hooks.go - Git Hooks Management
-
-Install/uninstall git hooks for auto-submission:
-
-```go
-hm := client.NewHookManager(projectDir)
-hm.Install("pre-push")
-hm.Uninstall("pre-commit")
-hm.List()
 ```
 
 #### ui.go - Terminal UI Rendering
@@ -285,17 +273,6 @@ ft_hackthon --json --non-interactive --insecure status
 ft_hackthon --non-interactive --insecure grademe || exit 1
 ```
 
-## Git Hooks
-
-Automate submissions with git hooks:
-
-```bash
-# Install pre-push hook
-ft_hackthon hooks install pre-push
-
-# Now every git push also runs grademe
-```
-
 ## Error Handling
 
 The CLI implements comprehensive error handling:
@@ -354,9 +331,6 @@ cd ~/my-project  # Must be a git repo
 
 # Test analytics
 ./bin/ft_hackthon report --trend
-
-# Test hooks
-./bin/ft_hackthon hooks list
 
 # Logout
 ./bin/ft_hackthon logout
