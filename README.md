@@ -33,6 +33,17 @@ Or extract from the Docker image:
 make docker-cli-binary  # Extracts CLI binary to bin/ft_hackthon-cli
 ```
 
+### Creating a New Release
+
+Push a version tag and GitHub Actions handles the rest:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The workflow builds for linux/amd64, darwin/amd64, darwin/arm64 and publishes a release with auto-generated changelog.
+
 ## Components
 
 | Component | Directory | Description |
