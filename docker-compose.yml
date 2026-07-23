@@ -126,7 +126,7 @@ services:
       - gitea-token:/token:ro
     command: /app/ft_hackthon-api
     healthcheck:
-      test: ["/app/healthcheck"]
+      test: ["CMD", "/app/healthcheck"]
       interval: 5s
       timeout: 3s
       retries: 3
