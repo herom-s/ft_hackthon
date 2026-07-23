@@ -53,8 +53,14 @@ func NewAPIClient(baseURL string) *APIClient {
 }
 
 // SetInsecureSkipVerify configures the client to skip TLS verification
+// and switches to HTTP if the URL uses HTTPS (insecure mode implies
+// the server may not have TLS configured).
 func (ac *APIClient) SetInsecureSkipVerify() {
 	ac.client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	if strings.HasPrefix(ac.baseURL, "https://") {
+		ac.baseURL = "http://" + ac.baseURL[len("https://"):]
+		ac.client.SetBaseURL(ac.baseURL)
+	}
 }
 
 // SetToken sets the authentication token
