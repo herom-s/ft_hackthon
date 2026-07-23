@@ -281,14 +281,22 @@ func gradeSingleChallengeDocker(ch *Challenge, chDir string, suite *Suite, cr Ch
 		return cr
 	}
 
-	// Override {suite_files} to empty — the test runner was already copied
-	// into /workspace/ alongside user files, so /workspace/*.c glob catches it.
+	// Build explicit /workspace/ file paths for user files and test runner.
+	// Using a glob (e.g., /workspace/*.py) would make the shell expand to
+	// unordered files, causing the wrong file to be the main script for
+	// interpreted languages (Python, etc.). Instead, list files explicitly
+	// so the test runner is always first (via {suite_files}).
+	wsFiles := make([]string, len(userFiles))
+	for i, f := range userFiles {
+		wsFiles[i] = "/workspace/" + filepath.Base(f)
+	}
+	wsFilesStr := strings.Join(wsFiles, " ")
 	r := strings.NewReplacer(
 		"{binary}", "/tmp/binary",
 		"{workspace}", "/workspace",
-		"{workspace_files}", fmt.Sprintf("/workspace/%s", collectPattern),
+		"{workspace_files}", wsFilesStr,
 		"{suite}", "/suite",
-		"{suite_files}", "",
+		"{suite_files}", "/workspace/"+testRunnerName,
 	)
 	buildCmd := r.Replace(buildCmdStr)
 	runCmd := r.Replace(runCmdStr)
@@ -664,12 +672,16 @@ func expandTemplate(tmpl, binary, workspace, suiteDir, pattern string) string {
 }
 
 func expandDockerTemplate(tmpl, pattern string) string {
+	suitePattern := pattern
+	if suitePattern == "" {
+		suitePattern = "*.c"
+	}
 	r := strings.NewReplacer(
 		"{binary}", "/tmp/binary",
 		"{workspace}", "/workspace",
 		"{workspace_files}", fmt.Sprintf("/workspace/%s", pattern),
 		"{suite}", "/suite",
-		"{suite_files}", "/suite/*.c",
+		"{suite_files}", fmt.Sprintf("/suite/%s", suitePattern),
 	)
 	return r.Replace(tmpl)
 }
