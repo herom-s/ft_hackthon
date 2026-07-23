@@ -38,7 +38,15 @@ func NewAPIClient(baseURL string) *APIClient {
 		baseURL = "https://localhost:8443/api/v1"
 	}
 
+	transport := &http.Transport{
+		TLSHandshakeTimeout:   30 * time.Second,
+		MaxIdleConns:          10,
+		IdleConnTimeout:       30 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	client := resty.New().
+		SetTransport(transport).
 		SetBaseURL(baseURL).
 		SetTimeout(time.Duration(defaultAPITimeout) * time.Second)
 
@@ -54,7 +62,12 @@ func NewAPIClient(baseURL string) *APIClient {
 
 // SetInsecureSkipVerify configures the client to skip TLS verification
 func (ac *APIClient) SetInsecureSkipVerify() {
-	ac.client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	if tr, ok := ac.client.GetClient().Transport.(*http.Transport); ok {
+		if tr.TLSClientConfig == nil {
+			tr.TLSClientConfig = &tls.Config{}
+		}
+		tr.TLSClientConfig.InsecureSkipVerify = true
+	}
 }
 
 // SetToken sets the authentication token
