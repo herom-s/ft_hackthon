@@ -266,19 +266,19 @@ func TestStatusEmoji(t *testing.T) {
 		status   string
 		expected string
 	}{
-		{"queued", "⏳"},
-		{"processing", "⚙"},
+		{"queued", "•"},
+		{"processing", "•"},
 		{"completed", "✓"},
-		{"failed", "❌"},
-		{"error", "❌"},
+		{"failed", "✗"},
+		{"error", "✗"},
 		{"unknown", "•"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.status, func(t *testing.T) {
-			emoji := getStatusEmoji(tt.status)
-			if emoji != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, emoji)
+			symbol := getStatusSymbol(tt.status)
+			if symbol != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, symbol)
 			}
 		})
 	}

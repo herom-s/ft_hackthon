@@ -40,17 +40,17 @@ func (sm *SubmitManager) SubmitGradeJob() error {
 		return fmt.Errorf("workspace not found at %s - please run 'login' first", ws)
 	}
 
-	fmt.Println("📤 Pushing workspace code to Gitea...")
+	fmt.Println("Pushing workspace code to Gitea...")
 	commitSHA, err := PushToGitea(ws)
 	if err != nil {
 		return fmt.Errorf("failed to push code to Gitea: %w", err)
 	}
 
-	fmt.Printf("📦 Pushed commit: %s\n", commitSHA[:12])
+	fmt.Printf("Pushed commit: %s\n", commitSHA[:12])
 
 	suite := readSuiteConfig(ws)
 
-	fmt.Println("📤 Submitting to grader...")
+	fmt.Println("Submitting to grader...")
 	submitResp, err := sm.apiClient.Submit(commitSHA, suite)
 	if err != nil {
 		return fmt.Errorf("submission failed: %w", err)
@@ -58,7 +58,7 @@ func (sm *SubmitManager) SubmitGradeJob() error {
 
 	fmt.Printf("✓ Job ID: %s\n\n", submitResp.JobID)
 
-	fmt.Println("⏳ Waiting for grading to complete...")
+	fmt.Println("Waiting for grading to complete...")
 	return sm.PollStatus(submitResp.JobID)
 }
 
@@ -132,12 +132,12 @@ func (sm *SubmitManager) PromptSuiteSelection() (string, error) {
 		}
 
 		if matched == nil {
-			fmt.Printf("❌ Unknown hackathon %q.\n", input)
+			fmt.Printf("✗ Unknown hackathon %q.\n", input)
 			continue
 		}
 
 		if !matched.Active {
-			fmt.Printf("❌ %q is not accepting submissions: %s\n", input, matched.Message)
+			fmt.Printf("✗ %q is not accepting submissions: %s\n", input, matched.Message)
 			continue
 		}
 
@@ -160,7 +160,7 @@ func (sm *SubmitManager) downloadChallengeSubjects(suite string) {
 
 	chResp, err := sm.apiClient.GetChallenges(suite)
 	if err != nil {
-		fmt.Printf("⚠ Could not fetch challenge subjects: %v\n", err)
+		fmt.Printf("[!] Could not fetch challenge subjects: %v\n", err)
 		return
 	}
 
@@ -171,11 +171,11 @@ func (sm *SubmitManager) downloadChallengeSubjects(suite string) {
 	for _, ch := range chResp.Challenges {
 		subjectPath := filepath.Join(subjectsDir, ch.Name+".txt")
 		if err := os.WriteFile(subjectPath, []byte(ch.Subject), 0644); err != nil {
-			fmt.Printf("⚠ Could not write %s: %v\n", subjectPath, err)
+			fmt.Printf("[!] Could not write %s: %v\n", subjectPath, err)
 			continue
 		}
 	}
-	fmt.Printf("📚 Challenge subjects saved to ~/ft_hackthon/%s/\n", suite)
+	fmt.Printf("Challenge subjects saved to ~/ft_hackthon/%s/\n", suite)
 }
 
 // PollStatus continuously polls the API for job status
@@ -193,7 +193,7 @@ func (sm *SubmitManager) PollStatus(jobID string) error {
 
 			statusResp, err := sm.apiClient.GetStatus(jobID)
 			if err != nil {
-				fmt.Printf("⚠ Error fetching status: %v\n", err)
+				fmt.Printf("[!] Error fetching status: %v\n", err)
 				if attempt > maxPollingAttempts {
 					return fmt.Errorf("polling timeout: exceeded %d attempts", maxPollingAttempts)
 				}
@@ -214,7 +214,7 @@ func (sm *SubmitManager) PollStatus(jobID string) error {
 			}
 
 			if statusResp.Status == "failed" || statusResp.Status == "error" {
-				fmt.Printf("\n❌ Grading failed: %s\n", statusResp.Message)
+				fmt.Printf("\n✗ Grading failed: %s\n", statusResp.Message)
 				return fmt.Errorf("grading job failed with status: %s", statusResp.Status)
 			}
 

@@ -17,10 +17,10 @@ API_DIR=./cmd/api
 WORKER_DIR=./cmd/worker
 
 # Colors for output
-BLUE=\033[0;34m
-GREEN=\033[0;32m
-YELLOW=\033[1;33m
-NC=\033[0m # No Color
+BLUE := $(shell printf '\033[0;34m')
+GREEN := $(shell printf '\033[0;32m')
+YELLOW := $(shell printf '\033[1;33m')
+NC := $(shell printf '\033[0m')
 
 help: ## Display this help screen
 	@echo "$(BLUE)ft_hackthon - Hackathon Grading System$(NC)"
@@ -153,8 +153,9 @@ clean: ## Clean build artifacts and workspace
 	$(GOCLEAN)
 	rm -rf bin/
 	rm -f coverage.out coverage.html
-	@echo "$(YELLOW)Cleaning ft_hackthon data (~/ft_hackthon)...$(NC)"
+	@echo "$(YELLOW)Cleaning ft_hackthon data...$(NC)"
 	rm -rf ~/ft_hackthon/
+	rm -rf ~/.ft_hackthon/
 	@echo "$(GREEN)✓ Clean completed$(NC)"
 
 # Development

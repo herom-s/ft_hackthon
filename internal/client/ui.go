@@ -16,12 +16,11 @@ func NewTerminalUI() *TerminalUI {
 
 // PrintStatusUpdate prints a clean status update to the terminal
 func (ui *TerminalUI) PrintStatusUpdate(status *StatusResponse) {
-	emoji := getStatusEmoji(status.Status)
 	message := getStatusMessage(status.Status)
 
-	fmt.Printf("%s STATUS: %s\n", emoji, message)
+	fmt.Printf("STATUS: %s\n", message)
 	if status.Message != "" {
-		fmt.Printf("  → %s\n", status.Message)
+		fmt.Printf("  -> %s\n", status.Message)
 	}
 }
 
@@ -103,27 +102,23 @@ func (ui *TerminalUI) centerText(text string, width int) string {
 
 // PrintLoadingSpinner prints a simple loading spinner
 func (ui *TerminalUI) PrintLoadingSpinner(message string) {
-	spinners := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	for i := 0; i < 2; i++ {
+	spinners := []string{"-", "\\", "|", "/"}
+	for i := 0; i < 4; i++ {
 		for _, s := range spinners {
 			fmt.Printf("\r%s %s", s, message)
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 	fmt.Println()
 }
 
-// getStatusEmoji returns an emoji for the current status
-func getStatusEmoji(status string) string {
+// getStatusSymbol returns a symbol for the current status
+func getStatusSymbol(status string) string {
 	switch status {
-	case "queued":
-		return "⏳"
-	case "processing":
-		return "⚙"
 	case "completed":
 		return "✓"
 	case "failed", "error":
-		return "❌"
+		return "✗"
 	default:
 		return "•"
 	}

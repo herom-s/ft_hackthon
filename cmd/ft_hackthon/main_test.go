@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"strings"
@@ -21,63 +20,6 @@ func captureStdout(fn func()) string {
 	out, _ := io.ReadAll(r)
 	os.Stdout = old
 	return string(out)
-}
-
-func TestCommandsRegistered(t *testing.T) {
-	expected := []string{"login", "register", "grademe", "status", "logout", "whoami",
-		"version", "help", "leaderboard", "submissions", "diff", "plagiarism", "rating"}
-	for _, name := range expected {
-		cmd, _, err := rootCmd.Find([]string{name})
-		if err != nil {
-			t.Errorf("expected command %q to be registered, got error: %v", name, err)
-		}
-		if cmd == nil {
-			t.Errorf("expected command %q to be non-nil", name)
-		}
-	}
-}
-
-func TestVersionCmd(t *testing.T) {
-	output := captureStdout(func() {
-		versionCmd.Run(versionCmd, []string{})
-	})
-	if !strings.Contains(output, "1.0.0") {
-		t.Errorf("expected version in output, got: %s", output)
-	}
-}
-
-func TestHelpCmd(t *testing.T) {
-	var buf bytes.Buffer
-	oldOut := rootCmd.OutOrStdout()
-	rootCmd.SetOut(&buf)
-	defer rootCmd.SetOut(oldOut)
-	helpCmd.Run(helpCmd, []string{})
-	output := buf.String()
-	if !strings.Contains(output, "ft_hackthon") {
-		t.Errorf("expected help output to contain command name, got: %s", output)
-	}
-}
-
-func TestWhoamiCmd_NotAuthenticated(t *testing.T) {
-	setupConfig(t)
-
-	output := captureStdout(func() {
-		rootCmd.SetArgs([]string{"whoami"})
-		rootCmd.Execute()
-	})
-
-	if !strings.Contains(output, "Not authenticated") {
-		t.Errorf("expected 'Not authenticated' in output, got: %s", output)
-	}
-}
-
-func setupConfig(t *testing.T) string {
-	t.Helper()
-	tmpDir := t.TempDir()
-	oldHome := os.Getenv("HOME")
-	t.Cleanup(func() { os.Setenv("HOME", oldHome) })
-	os.Setenv("HOME", tmpDir)
-	return tmpDir
 }
 
 func TestRootCmd(t *testing.T) {
@@ -179,4 +121,13 @@ func TestSaveGiteaConfig(t *testing.T) {
 	if cfg.GiteaToken != "tok123" {
 		t.Errorf("expected token, got %q", cfg.GiteaToken)
 	}
+}
+
+func setupConfig(t *testing.T) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	t.Cleanup(func() { os.Setenv("HOME", oldHome) })
+	os.Setenv("HOME", tmpDir)
+	return tmpDir
 }

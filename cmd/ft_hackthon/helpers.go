@@ -39,7 +39,7 @@ func ensureGiteaRepo(giteaCloneURL string) (string, error) {
 		return "", fmt.Errorf("failed to clone Gitea repo: %w", err)
 	}
 	config.SaveRepoPath(ws)
-	fmt.Printf("📁 Cloned repository to: %s\n", ws)
+	fmt.Printf("Cloned repository to: %s\n", ws)
 	return ws, nil
 }
 
@@ -49,16 +49,16 @@ func promptSuiteSelection(sm *client.SubmitManager, ws string) {
 	}
 	suite, err := sm.PromptSuiteSelection()
 	if err != nil {
-		fmt.Printf("⚠ Failed to configure test suite: %v\n", err)
+		fmt.Printf("[!] Failed to configure test suite: %v\n", err)
 		return
 	}
 	if suite == "" {
 		return
 	}
 	if err := client.InitWorkspaceRepo(ws, suite); err != nil {
-		fmt.Printf("⚠ Failed to push initial setup: %v\n", err)
+		fmt.Printf("[!] Failed to push initial setup: %v\n", err)
 	} else {
-		fmt.Println("📤 Initial setup pushed to Gitea.")
+		fmt.Println("Initial setup pushed to Gitea.")
 	}
 }
 

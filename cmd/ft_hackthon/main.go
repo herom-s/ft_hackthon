@@ -21,11 +21,7 @@ var rootCmd = &cobra.Command{
 	Long: `ft_hackthon is a terminal CLI tool for submitting and grading
 hackathon projects using the ft_hackthon automated grading system.
 
-Run without arguments to start the interactive shell, or use subcommands directly:
-
-  ft_hackthon login
-  ft_hackthon grademe
-  ft_hackthon status <job_id>`,
+Run without arguments to start the interactive shell.`,
 	Version: "1.0.0",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runREPL()
@@ -57,17 +53,5 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "Skip TLS certificate verification")
 
-	rootCmd.AddCommand(loginCmd)
-	rootCmd.AddCommand(registerCmd)
-	rootCmd.AddCommand(grademeCmd)
-	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(logoutCmd)
-	rootCmd.AddCommand(whoamiCmd)
-	rootCmd.AddCommand(ratingCmd)
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(helpCmd)
-	rootCmd.AddCommand(leaderboardCmd)
-	rootCmd.AddCommand(submissionsCmd)
-	rootCmd.AddCommand(diffCmd)
-	rootCmd.AddCommand(plagiarismCmd)
+
 }
