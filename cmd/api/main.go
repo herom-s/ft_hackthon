@@ -55,6 +55,7 @@ func main() {
 	http.HandleFunc("/api/v1/grade/leaderboard/", apiHandler.LeaderboardHandler)
 	http.HandleFunc("/api/v1/grade/plagiarism/", apiHandler.PlagiarismHandler)
 	http.HandleFunc("/api/v1/user/me", apiHandler.UserInfoHandler)
+	http.HandleFunc("/ws/", handler.WSEndpoint(apiHandler))
 
 	fmt.Println("\nAvailable Endpoints:")
 	fmt.Println("  GET  /api/v1/alerts                - System alerts")
@@ -72,6 +73,8 @@ func main() {
 	fmt.Println("  GET  /api/v1/grade/leaderboard/{hackathon} - Show top scorers")
 	fmt.Println("  GET  /api/v1/grade/plagiarism/{hackathon}  - Check for duplicate submissions")
 	fmt.Println("  GET  /api/v1/user/me               - Show current user info (includes rating)")
+	fmt.Println("  WS   /ws/grade/status/{job_id}     - Real-time job status via WebSocket")
+	fmt.Println("  WS   /ws/grade/jobs                 - Real-time jobs list via WebSocket")
 	fmt.Println()
 
 	mux := http.DefaultServeMux

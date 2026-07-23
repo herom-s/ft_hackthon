@@ -23,6 +23,13 @@ Authorization: Bearer <auth_token>
 
 ## Endpoints
 
+### WebSocket
+
+| Path | Auth | Description |
+|------|------|-------------|
+| `/ws/grade/status/{job_id}` | Token (query) | Real-time job status updates |
+| `/ws/grade/jobs` | Token (query) | Real-time jobs list |
+
 ### Authentication
 
 #### POST /auth/login
@@ -412,6 +419,90 @@ curl -X GET http://localhost:8000/api/v1/grade/status/job-uuid-1234-5678 \
 # Response:
 # {"job_id":"job-uuid-1234-5678","status":"processing","message":"Running tests..."}
 ```
+
+## WebSocket Endpoints
+
+### Connection
+
+WebSocket connections use the same base host as the REST API. Authentication is via query parameter `token`.
+
+```
+ws://localhost:8000/ws/grade/status/{job_id}?token=<auth_token>
+ws://localhost:8000/ws/grade/jobs?token=<auth_token>
+```
+
+### WS /ws/grade/status/{job_id}
+
+Real-time job status updates. The server pushes `StatusResponse` JSON messages as the job progresses.
+
+**Message format:**
+```json
+{
+  "job_id": "job-uuid-1234",
+  "status": "processing",
+  "message": "Running tests...",
+  "result": null
+}
+```
+
+On completion, the server sends the final result and closes the connection:
+
+```json
+{
+  "job_id": "job-uuid-1234",
+  "status": "completed",
+  "message": "Grading completed",
+  "result": {
+    "parser_success": true,
+    "benchmark_ms": 150,
+    "final_score": 95,
+    "details": "All tests passed",
+    "challenges": [...]
+  }
+}
+```
+
+### WS /ws/grade/jobs
+
+Real-time jobs list for the authenticated user. The server pushes updated job lists every 5 seconds.
+
+**Message format:**
+```json
+{
+  "jobs": [
+    {
+      "job_id": "job-uuid-1234",
+      "status": "completed",
+      "message": "Grading completed",
+      "created_at": "2024-06-03T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Implementation Notes
+
+#### Client Fallback
+
+The CLI automatically attempts WebSocket first. If the connection fails (e.g., server doesn't support WebSocket), it falls back to HTTP polling:
+
+```go
+wsc := client.NewWSClient(baseURL, token)
+err := wsc.ListenStatus(jobID, func(s *StatusResponse) {
+    // Real-time updates here
+})
+if err != nil {
+    // Fallback to HTTP GET polling
+}
+```
+
+#### Server Implementation
+
+```go
+http.HandleFunc("/ws/", handler.WSEndpoint(apiHandler))
+```
+
+The WebSocket handler supports both token-in-URL and Authorization header for flexibility.
 
 ## Implementation Notes
 

@@ -3,24 +3,22 @@
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                     FT_HACKTHON                          │
-│           Automated Hackathon Grading System             │
-└──────────────────────────────────────────────────────────┘
-    │                  │                  │           │
-    ▼                  ▼                  ▼           ▼
-┌────────┐       ┌──────────┐       ┌──────────┐ ┌──────────┐
-│  CLI   │       │   API    │       │  WORKER  │ │  GITEA   │
-│ Client │       │  Server  │       │  Engine  │ │   Repo   │
-│(HTTP)  │       │  (HTTP)  │       │(Polling) │ │(SSH/HTTP)│
-└───┬────┘       └────┬─────┘       └─────┬────┘ └────┬─────┘
-    │                 │                   │           │
-    └─────────────────┼───────────────────┘           │
-                      │                               │
-              ┌───────▼────────┐                      │
-              │   PostgreSQL   │◄─────────────────────┘
-              │   Database     │
-              └────────────────┘
+                     FT_HACKTHON
+           Automated Hackathon Grading System
+    |                  |                  |           |
+    v                  v                  v           v
++--------+       +----------+       +----------+ +----------+
+|  CLI   |       |   API    |       |  WORKER  | |  GITEA   |
+| Client |       |  Server  |       |  Engine  | |   Repo   |
+|(HTTP/WS)|      |  (HTTP)  |       |(Polling) | |(SSH/HTTP)|
++----+---+       +----+-----+       +-----+----+ +----+-----+
+    |                 |                   |           |
+    +-----------------+-------------------+           |
+                      |                               |
+              +-------v--------+                      |
+              |   PostgreSQL   |<----------------------+
+              |   Database     |
+              +----------------+
 ```
 
 ## Running the Complete System
@@ -76,19 +74,22 @@ make run-cli ARGS="grademe"
 ```bash
 $ ft_hackthon login
 Username: alice@example.com
-Password: ••••••••••••
-✓ Successfully logged in as alice@example.com
+Password: ************
+
+Authenticating...
++ Successfully logged in as alice@example.com
++ Token saved to ~/.ft_hackthon/config.json
 ```
 
 **System Flow:**
 ```
 CLI
-  └─ Prompt for credentials
-  └─ POST /api/v1/auth/login {username, password}
-       └─ API Handler receives request
-       └─ Creates random token
-       └─ Returns token
-  └─ Save token to ~/.ft_hackthon/config.json
+  +- Prompt for credentials
+  +- POST /api/v1/auth/login {username, password}
+       +- API Handler receives request
+       +- Creates random token
+       +- Returns token
+  +- Save token to ~/.ft_hackthon/config.json
 ```
 
 **API Logs:**
@@ -111,29 +112,52 @@ nothing to commit, working tree clean
 **User Command:**
 ```bash
 $ ft_hackthon grademe
-📦 Found git commit: a1b2c3d4e5f6a7b8c9d0
-✓ Job ID: job-abc123def456
+Pushed commit: a1b2c3d4e5f6a7b8c9d0
++ Job ID: job-abc123def456
 
-⏳ Waiting for grading to complete...
+Waiting for grading to complete...
+
+STATUS: Queued - Waiting for grader availability...
+STATUS: Processing - Running benchmarks and tests...
+STATUS: Completed!
+
+==================================================
+             GRADING RESULTS
+==================================================
+
+ Parser Success ........................... YES
+ Benchmark Speed ......................... 145 ms
+ Final Score ............................ 90 points
+
+==================================================
+
+Details:
++ Parser validation: PASSED
+  - All test cases passed
+  - Code structure: Valid
++ Benchmark: 145 ms
+  - Performance: Very Good
+
++ Grading completed successfully!
 ```
 
 **System Flow:**
 
 ```
 CLI
-  ├─ Load token from config
-  ├─ Verify git repo: git rev-parse --git-dir
-  ├─ Get commit SHA: git rev-parse HEAD
-  └─ POST /api/v1/grade/submit {commit_sha}
-       └─ API Handler
-            ├─ Extract user from token
-            ├─ Create Job object
-            │  ├─ ID: "job-abc123def456"
-            │  ├─ UserID: "user_alice"
-            │  ├─ CommitSHA: "a1b2c3d4e5f6a7b8c9d0"
-            │  └─ Status: "queued"
-            └─ Store in Database
-                 └─ Return 202 Accepted with Job ID
+  +- Load token from config
+  +- Verify git repo: git rev-parse --git-dir
+  +- Get commit SHA: git rev-parse HEAD
+  +- POST /api/v1/grade/submit {commit_sha}
+       +- API Handler
+            +- Extract user from token
+            +- Create Job object
+            |  +- ID: "job-abc123def456"
+            |  +- UserID: "user_alice"
+            |  +- CommitSHA: "a1b2c3d4e5f6a7b8c9d0"
+            |  +- Status: "queued"
+            +- Store in Database
+                 +- Return 202 Accepted with Job ID
 
 Database Update:
   jobs["job-abc123def456"] = {
@@ -151,30 +175,43 @@ Database Update:
 127.0.0.1 POST /api/v1/grade/submit
 ```
 
-#### Step 4: CLI Polls for Status
+#### Step 4: CLI Monitors Status
 
-**System Flow:**
+**Using WebSocket (primary):**
+```
+CLI connects to WS /ws/grade/status/job-abc123def456
+
+Server pushes real-time updates:
+  -> {"status": "queued"}
+  -> Display: STATUS: Queued - Waiting for grader availability...
+  -> {"status": "processing"}
+  -> Display: STATUS: Processing - Running benchmarks and tests...
+  -> {"status": "completed", "result": {...}}
+  -> Display results
+```
+
+**Fallback HTTP polling (if WebSocket unavailable):**
 
 ```
 CLI (Polling Loop - every 2 seconds)
 
 Attempt 1:
-  └─ GET /api/v1/grade/status/job-abc123def456
-       └─ API: Returns status = "queued"
-  └─ Display: ⏳ STATUS: Queued - Waiting for grader availability...
+  +- GET /api/v1/grade/status/job-abc123def456
+       +- API: Returns status = "queued"
+  +- Display: STATUS: Queued - Waiting for grader availability...
 
 Attempt 2:
-  └─ GET /api/v1/grade/status/job-abc123def456
-       └─ API: Returns status = "processing"
-  └─ Display: ⚙ STATUS: Processing - Running benchmarks and tests...
+  +- GET /api/v1/grade/status/job-abc123def456
+       +- API: Returns status = "processing"
+  +- Display: STATUS: Processing - Running benchmarks and tests...
 
 Attempt 3-5:
-  └─ (Continue polling, status still "processing")
+  +- (Continue polling, status still "processing")
 
 Attempt 6:
-  └─ GET /api/v1/grade/status/job-abc123def456
-       └─ API: Returns status = "completed" with result
-  └─ Display results and exit polling loop
+  +- GET /api/v1/grade/status/job-abc123def456
+       +- API: Returns status = "completed" with result
+  +- Display results and exit polling loop
 ```
 
 #### Step 5: Worker Processes Job
@@ -185,40 +222,40 @@ Attempt 6:
 Worker Polling Loop (every 5 seconds)
 
 Poll 1:
-  └─ GetPendingJobs(5)
-       └─ Find job with status="queued" or "processing"
-       └─ Fetch job-abc123def456
+  +- GetPendingJobs(5)
+       +- Find job with status="queued"
+       +- Fetch job-abc123def456
 
 Job Found:
-  ├─ Update job.Status = "processing"
-  ├─ Update job.Message = "Running parser tests and benchmarks..."
-  ├─ Save to Database
-  └─ gradeProject(job):
-       ├─ Create temp directory
-       ├─ git clone <GiteaCloneURL> <tmpdir>/repo
-       ├─ git checkout <CommitSHA>
-       ├─ grader.Grade(workspaceDir, suite):
-       │   ├─ Detect suite → load suite config
-       │   ├─ Build test binary (gcc/make)
-       │   ├─ Run tests, measure benchmark time
-       │   └─ Calculate score, generate result
-       └─ Return *database.Result
+  +- Update job.Status = "processing"
+  +- Update job.Message = "Running parser tests and benchmarks..."
+  +- Save to Database
+  +- gradeProject(job):
+       +- Create temp directory
+       +- git clone <GiteaCloneURL> <tmpdir>/repo
+       +- git checkout <CommitSHA>
+       +- grader.Grade(workspaceDir, suite):
+       |   +- Detect suite -> load suite config
+       |   +- Build test binary (gcc/make)
+       |   +- Run tests, measure benchmark time
+       |   +- Calculate score, generate result
+       +- Return *database.Result
 
 Update Elo Rating (if parser passed):
-  ├─ Get user's current rating (default 1200)
-  ├─ ComputeNewRating(currentRating, score)
-  └─ Save updated rating
+  +- Get user's current rating (default 1200)
+  +- ComputeNewRating(currentRating, score)
+  +- Save updated rating
 
 Save Result:
-  ├─ job.Result = Result{
-  │    ParserSuccess: true,
-  │    BenchmarkMs: 145,
-  │    FinalScore: 90,
-  │    Details: "Grading Report: ✓ Parser: PASSED..."
-  │  }
-  ├─ job.Status = "completed"
-  ├─ job.UpdatedAt = now()
-  └─ Save to Database
+  +- job.Result = Result{
+  |    ParserSuccess: true,
+  |    BenchmarkMs: 145,
+  |    FinalScore: 90,
+  |    Details: "Grading Report: + Parser: PASSED..."
+  |  }
+  +- job.Status = "completed"
+  +- job.UpdatedAt = now()
+  +- Save to Database
 
 Final Job State:
   jobs["job-abc123def456"] = {
@@ -242,32 +279,6 @@ Processing job: job-abc123def456 (commit: a1b2c3d4...)
 Job completed: job-abc123def456 - Parser: true, Score: 90
 ```
 
-#### Step 6: CLI Displays Results
-
-**CLI Output:**
-```
-✓ STATUS: Completed!
-
-═══════════════════════════════════════════════════
-            GRADING RESULTS
-═══════════════════════════════════════════════════
-
- Parser Success ........................... ✓ YES
- Benchmark Speed ......................... 145 ms
- Final Score ............................ 90 points
-
-═══════════════════════════════════════════════════
-
-Grading Report:
-✓ Parser validation: PASSED
-  - All test cases passed
-  - Code structure: Valid
-✓ Benchmark: 145 ms
-  - Performance: Very Good
-
-✓ Grading completed successfully!
-```
-
 ---
 
 ## System Component Details
@@ -278,10 +289,10 @@ Grading Report:
 ```bash
 $ ./bin/ft_hackthon-api
 
-╔════════════════════════════════════════════╗
-║   ft_hackthon API Server                    ║
-║   Starting on :8000                        ║
-╚════════════════════════════════════════════╝
++------------------------------------------+
+|   ft_hackthon API Server                    |
+|   Starting on :8000                        |
++------------------------------------------+
 
 Available Endpoints:
   GET  /api/v1/health                - Health check
@@ -289,10 +300,12 @@ Available Endpoints:
   POST /api/v1/auth/register         - Register
   POST /api/v1/grade/submit          - Submit project
   GET  /api/v1/grade/status/{job_id} - Get job status
+  WS   /ws/grade/status/{job_id}     - Real-time job status
+  WS   /ws/grade/jobs                 - Real-time jobs list
 ```
 
 **Responsibilities:**
-- Accept HTTP requests
+- Accept HTTP and WebSocket requests
 - Validate authentication
 - Create/update jobs in database
 - Return status information
@@ -309,12 +322,12 @@ Available Endpoints:
 ```bash
 $ ./bin/ft_hackthon-worker
 
-╔════════════════════════════════════════════╗
-║   ft_hackthon Background Worker             ║
-║   Starting job processor...                ║
-╚════════════════════════════════════════════╝
++------------------------------------------+
+|   ft_hackthon Background Worker             |
+|   Starting job processor...                |
++------------------------------------------+
 
-✓ Worker is running and listening for jobs...
++ Worker is running and listening for jobs...
 ```
 
 **Responsibilities:**
@@ -328,34 +341,40 @@ $ ./bin/ft_hackthon-worker
 **Processing:**
 - Checks database every 5 seconds
 - Processes up to 5 jobs per cycle
-- Simulates 2-second grading per job
 - Updates status in real-time
+- Circuit breaker for resilience
 
 ### CLI Client
 
 **Commands:**
 ```
-ft_hackthon login              # Authenticate
-ft_hackthon register           # Create account
-ft_hackthon grademe            # Submit project
-ft_hackthon status [job_id]    # List jobs or check status
-ft_hackthon logout             # Clear token
-ft_hackthon whoami             # Show current user
-ft_hackthon leaderboard <hack> # View top scorers
-ft_hackthon submissions [ch]   # View submission history
-ft_hackthon diff <job_id>      # View submitted code
-ft_hackthon plagiarism <hack>  # Check for duplicates
-ft_hackthon rating             # Show Elo rating
-ft_hackthon version            # Show version
-ft_hackthon help               # Show help
+login              # Authenticate
+register           # Create account
+grademe            # Submit project
+batch              # Submit multiple projects or all commits
+status [job_id]    # List jobs or check status
+submissions [ch]   # View submission history
+diff <job_id>      # View submitted code
+leaderboard <hack> # View top scorers
+plagiarism <hack>  # Check for duplicates
+report             # Submission analytics and trends
+hooks              # Manage git hooks
+logout             # Clear token
+whoami             # Show current user
+rating             # Show Elo rating
+version            # Show version
+help               # Show help
 ```
 
 **Features:**
 - Secure password input
 - Token persistence
 - Git integration
-- Real-time polling
-- Beautiful output formatting
+- Real-time monitoring (WebSocket)
+- Batch submission
+- Submission analytics
+- Git hooks for automation
+- CI/CD support (non-interactive, JSON output)
 
 ---
 
@@ -414,7 +433,7 @@ ft_hackthon help               # Show help
       UserID: "user_alice",
       CommitSHA: "a1b2c3d4e5f6...",
       Status: "completed",
-      Message: "Waiting for grader availability",
+      Message: "",
       Result: {
         ParserSuccess: true,
         BenchmarkMs: 145,
@@ -446,13 +465,34 @@ make run-cli ARGS="login"
 make run-cli ARGS="grademe"
 ```
 
-### Method 2: Integration Test
+### Method 2: Batch Submission
 
 ```bash
-bash scripts/integration-test.sh
+# Submit multiple projects
+./bin/ft_hackthon batch /path/to/project1 /path/to/project2
+
+# Submit all commits of a project
+./bin/ft_hackthon batch --all-commits .
 ```
 
-### Method 3: API Testing with cURL
+### Method 3: Submission Analytics
+
+```bash
+# Show stats for last 30 days
+./bin/ft_hackthon report
+
+# Show stats with trend for last 7 days
+./bin/ft_hackthon report --days=7 --trend
+```
+
+### Method 4: WebSocket Testing
+
+```bash
+# Using websocat tool
+websocat "ws://localhost:8000/ws/grade/status/job-abc123?token=<token>"
+```
+
+### Method 5: API Testing with cURL
 
 ```bash
 # Health check
@@ -472,6 +512,16 @@ curl -X POST http://localhost:8000/api/v1/grade/submit \
 # Check status
 curl http://localhost:8000/api/v1/grade/status/<job_id> \
   -H "Authorization: Bearer <token>"
+```
+
+### Method 6: CI/CD Integration
+
+```bash
+# Non-interactive grading
+./bin/ft_hackthon --non-interactive --insecure grademe
+
+# JSON output for programmatic parsing
+./bin/ft_hackthon --json --non-interactive --insecure status
 ```
 
 ---
@@ -507,6 +557,12 @@ kill -9 <PID>
 - All data is lost
 - Use persistent database for production
 
+### WebSocket Connection Fails
+
+- The CLI automatically falls back to HTTP polling
+- Ensure the server supports WebSocket (check /ws/ endpoints)
+- Verify token is valid
+
 ---
 
 ## Performance Characteristics
@@ -517,7 +573,8 @@ kill -9 <PID>
 | Submit | ~100-200ms |
 | Grading (real tests) | 10-60 seconds (varies) |
 | Status poll | ~50-100ms |
-| Full cycle (submit→complete) | 5-10 seconds |
+| WebSocket update | ~10-50ms |
+| Full cycle (submit->complete) | 5-10 seconds |
 
 ---
 
@@ -530,13 +587,18 @@ kill -9 <PID>
 - [x] Implement rate limiting
 - [x] Add request logging/tracing
 - [x] Implement health checks (DB ping, component status response)
-- [x] Add database migrations (numbered steps, schema_migrations tracking table)
-- [x] Set up load balancing for API (nginx reverse proxy, upstream to api:8000, Docker DNS round-robin)
-- [x] Scale worker with multiple instances (PostgreSQL SKIP LOCKED safe claiming, automatic stuck job recovery, WORKER_ID env var)
-- [x] Implement job queue (PostgreSQL as queue with SKIP LOCKED — no Redis/RabbitMQ needed)
-- [x] Add monitoring and alerts (Prometheus metrics endpoint, threshold-based alert checker, alert acknowledgment API)
-- [x] Configure HTTPS/TLS (nginx SSL termination, self-signed cert generation, HTTP→HTTPS redirect, TLSv1.2/1.3)
-- [x] Set up backup/recovery (automated PostgreSQL dump via backup service, retention pruning, restore script)
+- [x] Add database migrations
+- [x] Set up load balancing for API (nginx reverse proxy)
+- [x] Scale worker with multiple instances (PostgreSQL SKIP LOCKED)
+- [x] Implement job queue (PostgreSQL as queue)
+- [x] Add monitoring and alerts
+- [x] Configure HTTPS/TLS
+- [x] Set up backup/recovery
+- [x] Add WebSocket support for real-time updates
+- [x] Add CI/CD integration (JSON output, non-interactive mode, exit codes)
+- [x] Add batch submission support
+- [x] Add submission analytics and reports
+- [x] Add git hooks for automation
 
 ---
 
@@ -544,9 +606,9 @@ kill -9 <PID>
 
 The complete ft_hackthon system consists of three independent services:
 
-1. **API Server** - Handles HTTP requests and manages database
+1. **API Server** - Handles HTTP/WebSocket requests and manages database
 2. **Worker Engine** - Processes jobs in the background
-3. **CLI Client** - User interface for submission and monitoring
+3. **CLI Client** - User interface for submission, monitoring, batch ops, analytics, and automation
 
 All three work together to provide a seamless, real-time grading experience.
 

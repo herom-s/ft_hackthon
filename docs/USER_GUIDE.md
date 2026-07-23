@@ -94,26 +94,26 @@ ft_hackthon grademe
 The CLI will display real-time updates:
 
 ```
-📦 Found git commit: abc123def456
-✓ Job ID: job-uuid-1234
+Pushed commit: abc123def456
++ Job ID: job-uuid-1234
 
-⏳ Waiting for grading to complete...
+Waiting for grading to complete...
 
-⏳ STATUS: Queued - Waiting for grader availability...
-⚙ STATUS: Processing - Running benchmarks and tests...
-✓ STATUS: Completed!
+STATUS: Queued - Waiting for grader availability...
+STATUS: Processing - Running benchmarks and tests...
+STATUS: Completed!
 
-═══════════════════════════════════════════════════
-            GRADING RESULTS
-═══════════════════════════════════════════════════
+==================================================
+             GRADING RESULTS
+==================================================
 
- Parser Success ........................... ✓ YES
+ Parser Success ........................... YES
  Benchmark Speed ......................... 150 ms
  Final Score ............................ 95 points
 
-═══════════════════════════════════════════════════
+==================================================
 
-✓ Grading completed successfully!
++ Grading completed successfully!
 ```
 
 ## Checking Job Status
@@ -173,6 +173,45 @@ ft_hackthon diff <job_id>
 ft_hackthon plagiarism <hackathon>
 ```
 
+### Batch Submission
+
+```bash
+# Submit multiple project directories
+ft_hackthon batch ../project1 ../project2 ../project3
+
+# Submit all commits in a project
+ft_hackthon batch --all-commits .
+```
+
+### Analytics and Reports
+
+```bash
+# Show submission stats for the last 30 days
+ft_hackthon report
+
+# Show stats for a specific challenge
+ft_hackthon report factorial
+
+# Show stats with trend chart for last 7 days
+ft_hackthon report --days=7 --trend
+```
+
+### Git Hooks
+
+```bash
+# Install pre-push hook (auto-submits when you push)
+ft_hackthon hooks install pre-push
+
+# Install pre-commit hook
+ft_hackthon hooks install pre-commit
+
+# List installed hooks
+ft_hackthon hooks list
+
+# Remove a hook
+ft_hackthon hooks uninstall pre-push
+```
+
 ### System Commands
 
 ```bash
@@ -189,7 +228,22 @@ ft_hackthon rating
 ft_hackthon --help
 ```
 
+### CI/CD Integration
 
+```bash
+# Non-interactive mode (for CI pipelines)
+ft_hackthon --non-interactive grademe
+
+# JSON output (for programmatic consumption)
+ft_hackthon --json status
+ft_hackthon --json leaderboard libft-tester
+
+# Quiet mode (suppress non-essential output)
+ft_hackthon --quiet grademe
+
+# Combined for CI
+ft_hackthon --non-interactive --json --insecure status
+```
 
 ## Customizing API Endpoint
 
@@ -229,20 +283,20 @@ ft_hackthon leaderboard libft-tester
 
 Output:
 ```
-🏆 Leaderboard - libft-tester
-────────────────────────────────────────────────────────────
-Rank User                 Score    Benchmark  Rating
-────────────────────────────────────────────────────────────
-1    hermarti             70       286ms      1200
-2    another-user         45       512ms      1100
+Leaderboard - libft-tester
+------------------------------------------------------------------------
+Rank User                 Score    Rating  Benchmark
+------------------------------------------------------------------------
+1    hermarti             70       1200    286ms
+2    another-user         45       1100    512ms
 ```
 
 ## Understanding Grading Results
 
 ### Parser Success
 
-- **✓ YES** - Your code parser passed validation tests
-- **✗ NO** - Your code parser failed validation tests
+- **YES** - Your code parser passed validation tests
+- **NO** - Your code parser failed validation tests
 
 ### Benchmark Speed
 
@@ -347,20 +401,52 @@ Check for duplicate submissions:
 ft_hackthon plagiarism <hackathon_name>
 ```
 
-### 4. Scripting
+### 4. Submission Analytics
 
-The CLI can be used in scripts:
+Track your performance over time:
+
+```bash
+# Overall stats
+ft_hackthon report
+
+# Per-challenge breakdown with trends
+ft_hackthon report --trend --days=7
+```
+
+### 5. Automated Submission with Git Hooks
+
+Install a pre-push hook to auto-submit when you push:
+
+```bash
+ft_hackthon hooks install pre-push
+# Now every `git push` will also trigger ft_hackthon grademe
+```
+
+### 6. Batch Processing
+
+Submit multiple projects at once:
+
+```bash
+ft_hackthon batch ~/projects/project-a ~/projects/project-b
+
+# Or submit every commit in your history
+ft_hackthon batch --all-commits .
+```
+
+### 7. Scripting
+
+The CLI can be used in scripts with `--non-interactive` and `--json`:
 
 ```bash
 #!/bin/bash
-# Submit multiple projects
+# CI/CD pipeline integration
 
-for project in project1 project2 project3; do
-    cd "$project"
-    echo "Submitting $project..."
-    ft_hackthon grademe
-    cd ..
-done
+# Submit for grading
+ft_hackthon --non-interactive --insecure grademe || exit 1
+
+# Wait and check status
+sleep 30
+ft_hackthon --json --non-interactive --insecure status | jq .
 ```
 
 ## Configuration
@@ -489,10 +575,8 @@ Submit multiple commits:
 
 ```bash
 #!/bin/bash
-for commit in $(git log --oneline | awk '{print $1}'); do
-    git checkout "$commit"
-    ft_hackthon grademe
-done
+dirs=(~/projects/*/)
+ft_hackthon batch "${dirs[@]}"
 ```
 
 ## Getting Help
@@ -503,6 +587,9 @@ done
 ft_hackthon help
 ft_hackthon help login
 ft_hackthon help grademe
+ft_hackthon help batch
+ft_hackthon help report
+ft_hackthon help hooks
 ```
 
 ### Version Information
@@ -542,3 +629,12 @@ A: Contact your administrator for password reset options.
 
 **Q: How do I update ft_hackthon?**
 A: Download the latest version and reinstall, or rebuild from source.
+
+**Q: Can I use ft_hackthon in CI/CD?**
+A: Yes! Use `--non-interactive` and `--json` flags for pipeline integration.
+
+**Q: How do I submit multiple projects at once?**
+A: Use `ft_hackthon batch <dir1> <dir2> ...` to submit multiple directories.
+
+**Q: Can I auto-submit on git push?**
+A: Yes, run `ft_hackthon hooks install pre-push` to install a git hook.

@@ -33,14 +33,17 @@ ft_hackthon/
 ├── cmd/
 │   ├── api/main.go             # REST API server
 │   ├── ft_hackthon/
-│   │   ├── main.go             # Entry point + init
-│   │   ├── commands.go         # 13 Cobra command definitions
-│   │   ├── repl.go             # Interactive REPL loop
+│   │   ├── main.go             # Entry point + init (flags, CI/CD mode)
+│   │   ├── repl.go             # Interactive REPL loop (all commands)
 │   │   └── helpers.go          # Gitea/suite helpers
 │   └── worker/main.go          # Background worker
 ├── internal/
 │   ├── client/                 # CLI client
 │   │   ├── api.go, auth.go, submit.go, ui.go
+│   │   ├── websocket.go        # WebSocket client
+│   │   ├── batch.go            # Batch submission logic
+│   │   ├── analytics.go        # Submission analytics/reports
+│   │   └── hooks.go            # Git hooks management
 │   ├── config/config.go        # Config management
 │   ├── database/
 │   │   ├── database.go         # Interface + InMemoryDB
@@ -51,7 +54,10 @@ ft_hackthon/
 │   ├── grader/
 │   │   ├── grader.go           # Suite/challenge config, scoring
 │   │   └── run.go              # Grade execution
-│   ├── handler/handler.go      # API request handlers
+│   ├── handler/
+│   │   ├── handler.go          # API request handlers
+│   │   ├── websocket.go        # WebSocket handlers
+│   │   ├── cors.go, ratelimit.go, metrics.go, alerts.go
 │   └── worker/worker.go        # Job processor
 ├── docs/                       # Documentation
 ├── testsuites/                 # Test suite definitions
@@ -126,32 +132,41 @@ make fmt lint vet test
 
 ### Adding a New CLI Command
 
-1. Create the command handler in `cmd/ft_hackthon/commands.go`:
+1. Open `cmd/ft_hackthon/repl.go`
+2. Add your command to the `commands` slice with name, aliases, description, usage, and example:
 
 ```go
-var myCmd = &cobra.Command{
-    Use:   "mycommand",
-    Short: "Description of my command",
-    RunE: func(cmd *cobra.Command, args []string) error {
-        // Implementation
-        return nil
-    },
+{
+    name: "mycommand", aliases: []string{"mc"},
+    desc:   "Description of my command",
+    usage:   "mycommand <arg>",
+    example: "  mycommand something",
+},
+```
+
+3. Add a case in the `switch` block in `runREPL()`:
+
+```go
+case "mycommand", "mc":
+    handleMyCommand(args)
+```
+
+4. Implement the handler function:
+
+```go
+func handleMyCommand(args []string) {
+    // Implementation
 }
 ```
 
-2. Register the command in `cmd/ft_hackthon/main.go`'s `init()` function:
+5. If the command needs API access, pass `apiClient` or `submitManager`.
 
-```go
-func init() {
-    rootCmd.AddCommand(myCmd)
-}
-```
-
-3. Test the new command:
+6. Build and test:
 
 ```bash
 make build-cli
-./bin/ft_hackthon mycommand
+./bin/ft_hackthon
+> mycommand something
 ```
 
 ### Adding Client Functionality
@@ -175,10 +190,11 @@ err := apiClient.MyNewFunction()
 
 ### Extending the API
 
-1. Add handler in `internal/handler/handler.go`
+1. Add handler in `internal/handler/handler.go` or a new file
 2. Implement in `cmd/api/main.go`
 3. Update the client API in `internal/client/api.go`
-4. Document in `docs/API.md`
+4. Add WebSocket support in `internal/client/websocket.go` if needed
+5. Document in `docs/API.md`
 
 ## Error Handling Best Practices
 
@@ -235,10 +251,22 @@ Terminal output is handled by `internal/client/ui.go`:
 ui := client.NewTerminalUI()
 
 // Print formatted output
-ui.PrintError("Error message")
-ui.PrintSuccess("Success message")
 ui.PrintStatusUpdate(status)
 ui.PrintGradeResult(result)
+ui.PrintProgress(current, total, prefix)
+```
+
+All output uses ASCII characters only (no emoji). Use `+` for success, `-` for failure, `*` for neutral.
+
+## WebSocket Integration
+
+The CLI supports WebSocket for real-time updates. The client automatically falls back to HTTP polling if the WebSocket connection fails:
+
+```go
+wsc := client.NewWSClient(baseURL, token)
+err := wsc.ListenStatus(jobID, func(s *StatusResponse) {
+    // Handle real-time update
+})
 ```
 
 ## Debugging
@@ -337,10 +365,10 @@ Test full workflows:
 func TestLoginAndGrade(t *testing.T) {
     // Setup
     client := client.NewAPIClient(testURL)
-    
+
     // Execute
     resp, err := client.Login(testUser, testPass)
-    
+
     // Assert
     if err != nil {
         t.Fatalf("login failed: %v", err)
@@ -355,6 +383,16 @@ The project includes a Makefile that can be used in CI:
 ```bash
 make setup
 make fmt lint vet test build
+```
+
+The CLI also supports CI/CD directly with `--non-interactive` and `--json` flags:
+
+```bash
+# Non-interactive grading in CI
+ft_hackthon --non-interactive --insecure grademe
+
+# Parse results programmatically
+ft_hackthon --json --non-interactive --insecure status | jq .
 ```
 
 ## Performance Optimization
@@ -384,7 +422,7 @@ func BenchmarkLogin(b *testing.B) {
 ## Release Process
 
 ```bash
-# Update version in cmd/ft_hackthon/commands.go
+# Update version in cmd/ft_hackthon/main.go
 # Tag release
 git tag v1.0.0
 git push origin v1.0.0
@@ -447,10 +485,10 @@ go mod tidy
 
 The ft_hackthon grading system uses a generic test suite architecture. Test suites are stored as directories under `TESTSUITES_PATH`. Each suite directory contains:
 
-- `suite.yml` — descriptor file (required)
+- `suite.yml` -- descriptor file (required)
 - Zero or more test files (e.g. `test.c`, `test.py`, etc.)
 
-Test suites are distributed as **a separate Docker image** that the main ft_hackthon images mount at runtime. This means admins can develop, build, and publish their own test suites independently — no ft_hackthon code changes needed.
+Test suites are distributed as **a separate Docker image** that the main ft_hackthon images mount at runtime. This means admins can develop, build, and publish their own test suites independently -- no ft_hackthon code changes needed.
 
 ### Directory structure
 
@@ -531,7 +569,7 @@ services:
 4. Rebuild the Docker image: `make docker-build-testsuites`
 5. Restart services: `make docker-up`
 
-No Go code changes needed — the grader discovers suites automatically at startup.
+No Go code changes needed -- the grader discovers suites automatically at startup.
 
 ## Additional Resources
 

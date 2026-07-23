@@ -5,7 +5,7 @@
 Complete implementation of the three core system layers:
 
 1. **Database Layer** - Data models and persistence
-2. **Handler Layer** - REST API endpoints
+2. **Handler Layer** - REST API endpoints (including WebSocket)
 3. **Worker Layer** - Background job processing
 
 ---
@@ -63,7 +63,6 @@ type ChallengeDetail struct {
     Points      int    // Points earned
     TestsRun    int    // Total tests run
     TestsPassed int    // Tests passed
-    BenchmarkMs int    // Challenge execution time
     Details     string // Per-challenge details
 }
 ```
@@ -167,17 +166,19 @@ db.CreateJob(job)
 
 ---
 
-## 2. Handler Layer (`internal/handler/handler.go`)
+## 2. Handler Layer (`internal/handler/handler.go` + `websocket.go`)
 
 ### APIHandler Structure
 
 ```go
 type APIHandler struct {
-    db database.Database
+    db    database.Database
+    gitea gitea.ClientInterface
+    suitesPath string
 }
 ```
 
-### Implemented Endpoints
+### Implemented REST Endpoints
 
 #### Health Check
 ```
@@ -197,7 +198,7 @@ Status:   200 OK
 ```
 POST /api/v1/auth/register
 Request:  {"username": "user", "password": "pass"}
-Response: {"token": "...", "user": "user"}
+Response: {"token": "...", "user": "user", "gitea_clone_url": "...", "gitea_token": "..."}
 Status:   201 Created
 ```
 
@@ -223,6 +224,22 @@ Response: {
 Status:   200 OK
 ```
 
+### WebSocket Endpoints
+
+#### Real-time Job Status
+```
+WS /ws/grade/status/{job_id}?token=<token>
+```
+
+Pushes `StatusResponse` JSON messages on status changes. Closes when job completes.
+
+#### Real-time Jobs List
+```
+WS /ws/grade/jobs?token=<token>
+```
+
+Pushes `JobsListResponse` JSON messages every 5 seconds.
+
 ### Handler Features
 
 - **Request Validation**
@@ -237,7 +254,7 @@ Status:   200 OK
 
 - **Authentication**
   - Bearer token extraction
-  - User ID lookup
+  - User ID lookup (via DB)
   - Ownership verification
 
 - **Token Generation**
@@ -252,6 +269,7 @@ handler := handler.NewAPIHandler(db)
 http.HandleFunc("/api/v1/auth/login", handler.LoginHandler)
 http.HandleFunc("/api/v1/grade/submit", handler.SubmitHandler)
 http.HandleFunc("/api/v1/grade/status/", handler.StatusHandler)
+http.HandleFunc("/ws/", handler.WSEndpoint(handler))
 ```
 
 ---
@@ -273,24 +291,24 @@ type Worker struct {
 
 ```
 Start Worker
-    ↓
+    |
 Poll Database (every 5 seconds)
-    ↓
+    |
 Get Pending Jobs (max 5 at a time)
-    ↓
+    |
 For Each Job:
-    ├─ Update status to "processing"
-    ├─ gradeProject():
-    │   ├─ Clone repo from Gitea (git clone)
-    │   ├─ Checkout specific commit
-    │   ├─ grader.Grade(): detect suite → build → run tests
-    │   └─ Convert result to database format
-    ├─ Save result to database
-    ├─ Update Elo rating (if parser passed)
-    │   ├─ Get current user rating
-    │   ├─ ComputeNewRating() based on score
-    │   └─ Save updated rating
-    └─ Job marked "completed"
+    +- Update status to "processing"
+    +- gradeProject():
+    |   +- Clone repo from Gitea (git clone)
+    |   +- Checkout specific commit
+    |   +- grader.Grade(): detect suite -> build -> run tests
+    |   +- Convert result to database format
+    +- Save result to database
+    +- Update Elo rating (if parser passed)
+    |   +- Get current user rating
+    |   +- ComputeNewRating() based on score
+    |   +- Save updated rating
+    +- Job marked "completed"
 ```
 
 ### Grading Logic
@@ -344,6 +362,7 @@ w.Stop()   // Stops processing, closes channels
 - Configurable poll interval
 - Job batching
 - Detailed logging
+- Circuit breaker (3-state: closed/half-open/open)
 
 ---
 
@@ -356,7 +375,7 @@ w.Stop()   // Stops processing, closes channels
 2. Initialize PostgreSQL connection (database.NewPostgresDB)
 3. Create APIHandler
 4. Optionally set TESTSUITES_PATH
-5. Register 12 routes
+5. Register 14 routes (REST + WebSocket)
 6. Start HTTP Server on :8000
 ```
 
@@ -374,6 +393,8 @@ GET  /api/v1/grade/suites/{suite}/challenges
 GET  /api/v1/grade/leaderboard/{hackathon}
 GET  /api/v1/grade/plagiarism/{hackathon}
 GET  /api/v1/user/me
+WS   /ws/grade/status/{job_id}
+WS   /ws/grade/jobs
 ```
 
 ### Worker Engine (`cmd/worker/main.go`)
@@ -394,34 +415,35 @@ GET  /api/v1/user/me
 
 ```
 CLI (ft_hackthon)
-    ↓ POST /api/v1/grade/submit
+    | POST /api/v1/grade/submit
 API Handler
-    ↓ CreateJob(job)
+    | CreateJob(job)
 Database
-    ↓ Creates job with status="queued"
-    
-Waits pollInterval (5 seconds by default)
-    
+    | Creates job with status="queued"
+
+    Waits pollInterval (5 seconds by default)
+
 Worker Polling Loop
-    ↓ GetPendingJobs()
+    | GetPendingJobs()
 Database
-    ↓ Returns job
+    | Returns job
 Worker
-    ├─ Updates job status="processing"
-    ├─ gradeProject(): clone repo, checkout commit, run grader.Grade()
-    ├─ Update Elo rating (if parser passed)
-    └─ SaveResult(jobID, result)
+    +- Updates job status="processing"
+    +- gradeProject(): clone repo, checkout commit, run grader.Grade()
+    +- Update Elo rating (if parser passed)
+    +- SaveResult(jobID, result)
 Database
-    ↓ Marks job as completed
-    
-CLI Polls Status
-    ↓ GET /api/v1/grade/status/{job_id}
+    | Marks job as completed
+
+CLI Monitors (WebSocket preferred, HTTP polling fallback)
+    | WS /ws/grade/status/{job_id}
+    | or GET /api/v1/grade/status/{job_id}
 API Handler
-    ↓ GetJob() from database
+    | GetJob() from database
 Database
-    ↓ Returns job with completed status + results
+    | Returns job with completed status + results
 CLI
-    ↓ Displays results to user
+    | Displays results to user
 ```
 
 ---
@@ -429,29 +451,30 @@ CLI
 ## Production Considerations
 
 ### Database Layer
-- ✅ Using PostgreSQL (production-ready)
-- ✅ Connection pooling via pgxpool
-- ✅ Auto-migration on startup (CREATE TABLE IF NOT EXISTS + numbered migrations with schema_migrations table)
-- [x] Add indexes on frequently queried fields (idx_jobs_user_id, idx_jobs_status, idx_jobs_created_at, idx_jobs_suite, idx_tokens_user_id, idx_users_username)
+- [x] Using PostgreSQL (production-ready)
+- [x] Connection pooling via pgxpool
+- [x] Auto-migration on startup (CREATE TABLE IF NOT EXISTS + numbered migrations with schema_migrations table)
+- [x] Add indexes on frequently queried fields
 
 ### Handler Layer
-- ✅ Password hashing with bcrypt (`golang.org/x/crypto/bcrypt`)
-- ✅ Random 64-char hex tokens (cryptographically secure)
-- ✅ Bearer token authentication
-- [x] Add rate limiting (token-bucket, 100 req/min per user/IP)
-- [x] Add request logging/tracing (structured slog JSON, status, duration, request ID)
-- [x] Implement CORS (Access-Control-Allow-Origin: *, OPTIONS preflight)
+- [x] Password hashing with bcrypt
+- [x] Random 64-char hex tokens
+- [x] Bearer token authentication
+- [x] Add rate limiting
+- [x] Add request logging/tracing
+- [x] Implement CORS
+- [x] WebSocket support for real-time updates
 
 ### Worker Layer
-- ✅ Real test execution via grader.Grade()
-- ✅ Elo rating computation
-- ✅ Graceful shutdown (signal handling)
-- [x] Use message queue (PostgreSQL SKIP LOCKED — no Redis/RabbitMQ needed)
-- [x] Distribute across multiple workers (atomic ClaimJobs, ReleaseStuckJobs recovery, WORKER_ID identity)
-- [x] Implement circuit breaker (3-state: closed/half-open/open, configurable threshold + reset)
-- [x] Add job retry logic (up to 3 attempts with exponential backoff)
-- [x] Implement job timeout (5-minute per-attempt deadline)
-- [x] Add worker health monitoring (Prometheus metrics + alert checker)
+- [x] Real test execution via grader.Grade()
+- [x] Elo rating computation
+- [x] Graceful shutdown
+- [x] PostgreSQL SKIP LOCKED job claiming
+- [x] Multi-worker support
+- [x] Circuit breaker
+- [x] Job retry logic (up to 3 attempts)
+- [x] Job timeout (5-minute)
+- [x] Worker health monitoring
 
 ---
 
@@ -462,34 +485,9 @@ CLI
 go run cmd/api/main.go
 ```
 
-Output:
-```
-╔════════════════════════════════════════════╗
-║   ft_hackthon API Server                    ║
-║   Starting on :8000                        ║
-╚════════════════════════════════════════════╝
-
-Available Endpoints:
-  GET  /api/v1/health                - Health check
-  POST /api/v1/auth/login            - Login
-  POST /api/v1/auth/register         - Register
-  POST /api/v1/grade/submit          - Submit project
-  GET  /api/v1/grade/status/{job_id} - Get job status
-```
-
 ### Start Worker
 ```bash
 go run cmd/worker/main.go
-```
-
-Output:
-```
-╔════════════════════════════════════════════╗
-║   ft_hackthon Background Worker             ║
-║   Starting job processor...                ║
-╚════════════════════════════════════════════╝
-
-✓ Worker is running and listening for jobs...
 ```
 
 ### Submit Project (CLI)
@@ -499,21 +497,32 @@ cd ~/my-project
 ft_hackthon grademe
 ```
 
+### Batch Submission
+```bash
+ft_hackthon batch ../project1 ../project2
+ft_hackthon batch --all-commits .
+```
+
+### Submission Analytics
+```bash
+ft_hackthon report --trend --days=30
+```
+
 ### Monitor System
 - API logs incoming requests
 - Worker logs job processing
 - Database maintains job state
-- Results displayed in real-time
+- Results displayed in real-time (WebSocket)
 
 ---
 
 ## Architecture Benefits
 
-✅ **Separation of Concerns** - Database, API, and processing are decoupled
-✅ **Scalability** - Worker can run on separate machines
-✅ **Reliability** - In-memory DB can be replaced with persistent store
-✅ **Testability** - Easy to mock database for testing
-✅ **Extensibility** - Simple to add new handlers or grading logic
+[x] **Separation of Concerns** - Database, API, and processing are decoupled
+[x] **Scalability** - Worker can run on separate machines
+[x] **Reliability** - In-memory DB can be replaced with persistent store
+[x] **Testability** - Easy to mock database for testing
+[x] **Extensibility** - Simple to add new handlers or grading logic
 
 ---
 
@@ -525,16 +534,18 @@ ft_hackthon grademe
 - Result storage
 - Thread-safe operations
 
-### Handlers: 300+ lines
-- 5 REST endpoints
+### Handlers: 350+ lines
+- 12 REST endpoints
+- 2 WebSocket endpoints
 - Request validation
 - Error handling
 - Authentication
 
 ### Worker: 200+ lines
 - Job polling
-- Grading simulation
+- Grading execution
 - Result generation
 - Status management
+- Circuit breaker
 
-**Total**: 750+ lines of fully functional production-grade code
+**Total**: 800+ lines of fully functional production-grade code

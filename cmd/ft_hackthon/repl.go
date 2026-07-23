@@ -36,6 +36,12 @@ var commands = []struct {
 		example: "  grademe",
 	},
 	{
+		name: "batch", aliases: []string{"b"},
+		desc:   "Submit multiple projects or all commits",
+		usage:   "batch <dir1> [dir2 ...] | batch --all-commits <dir>",
+		example: "  batch ../project1 ../project2\n  batch --all-commits .",
+	},
+	{
 		name: "status", aliases: []string{"st"},
 		desc:   "List your jobs or check a specific job status",
 		usage:   "status [job_id]",
@@ -63,6 +69,17 @@ var commands = []struct {
 		name: "diff", desc: "View code submitted for a grading job",
 		usage:   "diff <job_id>",
 		example: "  diff abc123def456",
+	},
+	{
+		name: "report", aliases: []string{"analytics", "stats"},
+		desc:   "Show submission analytics and trends",
+		usage:   "report [--days=30] [--trend] [challenge]",
+		example: "  report\n  report --days=7 --trend\n  report factorial",
+	},
+	{
+		name: "hooks", desc: "Manage git hooks for auto-submission",
+		usage:   "hooks install [pre-push|pre-commit] | hooks uninstall [type] | hooks list",
+		example: "  hooks install pre-push\n  hooks list",
 	},
 	{
 		name: "whoami", aliases: []string{"me"},
@@ -164,10 +181,10 @@ func runREPL() error {
 				continue
 			}
 			fmt.Println("Welcome to ft_hackthon!")
-			fmt.Println("━━━━━━━━━━━━━━━━━━━━━━")
+			fmt.Println("----------------------")
 			resp, err := authManager.Login()
 			if err != nil {
-				fmt.Printf("✗ Login failed: %v\n", err)
+				fmt.Printf("- Login failed: %v\n", err)
 			} else {
 				saveGiteaConfig(resp.GiteaCloneURL, resp.GiteaToken)
 				if resp.GiteaCloneURL != "" {
@@ -191,10 +208,10 @@ func runREPL() error {
 				continue
 			}
 			fmt.Println("Register New Account")
-			fmt.Println("━━━━━━━━━━━━━━━━━━━━━━")
+			fmt.Println("----------------------")
 			resp, err := authManager.Register()
 			if err != nil {
-				fmt.Printf("✗ Registration failed: %v\n", err)
+				fmt.Printf("- Registration failed: %v\n", err)
 			} else {
 				saveGiteaConfig(resp.GiteaCloneURL, resp.GiteaToken)
 				if resp.GiteaCloneURL != "" {
@@ -212,8 +229,14 @@ func runREPL() error {
 				continue
 			}
 			if err := submitManager.SubmitGradeJob(); err != nil {
-				fmt.Printf("✗ Grading failed: %v\n", err)
+				fmt.Printf("- Grading failed: %v\n", err)
 			}
+
+		case "batch", "b":
+			if !checkAuth() {
+				continue
+			}
+			handleBatch(submitManager, args)
 
 		case "status", "st":
 			if !checkAuth() {
@@ -239,11 +262,20 @@ func runREPL() error {
 		case "plagiarism", "dup":
 			handlePlagiarism(apiClient, args)
 
+		case "report", "analytics", "stats":
+			if !checkAuth() {
+				continue
+			}
+			handleReport(submitManager, args)
+
+		case "hooks":
+			handleHooks(args)
+
 		case "logout":
 			apiClient := newAPIClient()
 			am := client.NewAuthManager(apiClient)
 			if err := am.Logout(); err != nil {
-				fmt.Printf("✗ Logout failed: %v\n", err)
+				fmt.Printf("- Logout failed: %v\n", err)
 			}
 
 		case "whoami", "me":
@@ -254,7 +286,7 @@ func runREPL() error {
 			if err != nil {
 				cfg, cerr := config.LoadConfig()
 				if cerr != nil {
-					fmt.Printf("✗ Failed to load config: %v\n", cerr)
+					fmt.Printf("- Failed to load config: %v\n", cerr)
 					continue
 				}
 				if cfg.User == "" {
@@ -272,7 +304,7 @@ func runREPL() error {
 			}
 			info, err := apiClient.GetUserInfo()
 			if err != nil {
-				fmt.Printf("✗ Failed to get rating: %v\n", err)
+				fmt.Printf("- Failed to get rating: %v\n", err)
 				continue
 			}
 			fmt.Printf("Your Elo rating: %d\n", info.Rating)
@@ -365,11 +397,11 @@ func printCmdHelp(cmd struct {
 func checkAuth() bool {
 	isAuth, err := config.IsAuthenticated()
 	if err != nil {
-		fmt.Printf("✗ Auth check failed: %v\n", err)
+		fmt.Printf("- Auth check failed: %v\n", err)
 		return false
 	}
 	if !isAuth {
-		fmt.Println("✗ Not authenticated. Type 'login' first.")
+		fmt.Println("- Not authenticated. Type 'login' first.")
 		return false
 	}
 	return true
@@ -387,7 +419,7 @@ func handleStatus(apiClient *client.APIClient, ui *client.TerminalUI, args []str
 	if len(args) == 0 {
 		jobs, err := apiClient.ListJobs()
 		if err != nil {
-			fmt.Printf("✗ Failed to list jobs: %v\n", err)
+			fmt.Printf("- Failed to list jobs: %v\n", err)
 			return
 		}
 		if len(jobs.Jobs) == 0 {
@@ -397,12 +429,12 @@ func handleStatus(apiClient *client.APIClient, ui *client.TerminalUI, args []str
 		fmt.Println()
 		fmt.Println("Your jobs:")
 		for _, j := range jobs.Jobs {
-			symbol := "•"
+			symbol := "*"
 			switch j.Status {
 			case "completed":
-				symbol = "✓"
+				symbol = "+"
 			case "failed", "error":
-				symbol = "✗"
+				symbol = "-"
 			}
 			fmt.Printf("  %s %s  [%s]  %s\n", symbol, j.JobID, j.Status, j.Message)
 		}
@@ -412,14 +444,26 @@ func handleStatus(apiClient *client.APIClient, ui *client.TerminalUI, args []str
 
 	jobID := args[0]
 	fmt.Printf("Checking status for job: %s\n", jobID)
-	statusResp, err := apiClient.GetStatus(jobID)
+
+	token, _ := config.GetToken()
+	wsc := client.NewWSClient(apiBaseURL, token)
+	err := wsc.ListenStatus(jobID, func(s *client.StatusResponse) {
+		ui.PrintStatusUpdate(s)
+		if s.Result != nil {
+			fmt.Println()
+			ui.PrintGradeResult(s.Result)
+		}
+	})
 	if err != nil {
-		fmt.Printf("✗ Failed to get status: %v\n", err)
-		return
-	}
-	ui.PrintStatusUpdate(statusResp)
-	if statusResp.Result != nil {
-		ui.PrintGradeResult(statusResp.Result)
+		statusResp, err := apiClient.GetStatus(jobID)
+		if err != nil {
+			fmt.Printf("- Failed to get status: %v\n", err)
+			return
+		}
+		ui.PrintStatusUpdate(statusResp)
+		if statusResp.Result != nil {
+			ui.PrintGradeResult(statusResp.Result)
+		}
 	}
 }
 
@@ -431,7 +475,7 @@ func handleSubmissions(apiClient *client.APIClient, args []string) {
 
 	jobs, err := apiClient.ListJobs()
 	if err != nil {
-		fmt.Printf("✗ Failed to list jobs: %v\n", err)
+		fmt.Printf("- Failed to list jobs: %v\n", err)
 		return
 	}
 
@@ -482,7 +526,7 @@ func handleSubmissions(apiClient *client.APIClient, args []string) {
 		fmt.Printf(" for %q", challengeFilter)
 	}
 	fmt.Println()
-	fmt.Println(strings.Repeat("═", 72))
+	fmt.Println(strings.Repeat("=", 72))
 
 	chNames := make([]string, 0, len(challengeMap))
 	for name := range challengeMap {
@@ -506,9 +550,9 @@ func handleSubmissions(apiClient *client.APIClient, args []string) {
 		}
 		fmt.Printf("\n%s (%d pts)\n", title, entries[0].Points)
 		for i, e := range entries {
-			status := "✓"
+			status := "+"
 			if !e.Passed {
-				status = "✗"
+				status = "-"
 			}
 			ts := e.CreatedAt
 			if len(ts) > 16 {
@@ -523,9 +567,9 @@ func handleSubmissions(apiClient *client.APIClient, args []string) {
 		}
 		bestStr := fmt.Sprintf("%d/%d pts", bestPts, entries[0].Points)
 		if bestPassed {
-			fmt.Printf("  Best: %s ✓\n", bestStr)
+			fmt.Printf("  Best: %s +\n", bestStr)
 		} else {
-			fmt.Printf("  Best: %s ✗\n", bestStr)
+			fmt.Printf("  Best: %s -\n", bestStr)
 		}
 	}
 	fmt.Println()
@@ -533,14 +577,14 @@ func handleSubmissions(apiClient *client.APIClient, args []string) {
 
 func handleDiff(apiClient *client.APIClient, args []string) {
 	if len(args) == 0 {
-		fmt.Println("✗ Usage: diff <job_id>")
+		fmt.Println("- Usage: diff <job_id>")
 		return
 	}
 
 	jobID := args[0]
 	job, err := apiClient.GetJob(jobID)
 	if err != nil {
-		fmt.Printf("✗ Failed to get job: %v\n", err)
+		fmt.Printf("- Failed to get job: %v\n", err)
 		return
 	}
 	if job.CommitSHA == "" {
@@ -550,11 +594,11 @@ func handleDiff(apiClient *client.APIClient, args []string) {
 
 	ws, err := client.WorkspaceDir()
 	if err != nil {
-		fmt.Printf("✗ Failed to get workspace: %v\n", err)
+		fmt.Printf("- Failed to get workspace: %v\n", err)
 		return
 	}
 	if _, err := os.Stat(filepath.Join(ws, ".git")); err != nil {
-		fmt.Println("✗ Workspace not found. Run 'login' first.")
+		fmt.Println("- Workspace not found. Run 'login' first.")
 		return
 	}
 
@@ -574,12 +618,12 @@ func handleLeaderboard(apiClient *client.APIClient, args []string) {
 		hackathon = readSuiteConfig(".")
 	}
 	if hackathon == "" {
-		fmt.Println("✗ No hackathon specified. Usage: leaderboard <hackathon>")
+		fmt.Println("- No hackathon specified. Usage: leaderboard <hackathon>")
 		return
 	}
 	lb, err := apiClient.GetLeaderboard(hackathon)
 	if err != nil {
-		fmt.Printf("✗ Failed to get leaderboard: %v\n", err)
+		fmt.Printf("- Failed to get leaderboard: %v\n", err)
 		return
 	}
 	if len(lb.Entries) == 0 {
@@ -588,9 +632,9 @@ func handleLeaderboard(apiClient *client.APIClient, args []string) {
 	}
 	fmt.Println()
 	fmt.Printf("Leaderboard - %s\n", hackathon)
-	fmt.Println(strings.Repeat("─", 72))
+	fmt.Println(strings.Repeat("-", 72))
 	fmt.Printf("%-4s %-20s %-8s %-8s %s\n", "Rank", "User", "Score", "Rating", "Benchmark")
-	fmt.Println(strings.Repeat("─", 72))
+	fmt.Println(strings.Repeat("-", 72))
 	for i, e := range lb.Entries {
 		bm := fmt.Sprintf("%dms", e.BenchmarkMs)
 		if e.BenchmarkMs == 0 {
@@ -613,12 +657,12 @@ func handlePlagiarism(apiClient *client.APIClient, args []string) {
 		hackathon = readSuiteConfig(".")
 	}
 	if hackathon == "" {
-		fmt.Println("✗ No hackathon specified. Usage: plagiarism <hackathon>")
+		fmt.Println("- No hackathon specified. Usage: plagiarism <hackathon>")
 		return
 	}
 	groups, err := apiClient.CheckPlagiarism(hackathon)
 	if err != nil {
-		fmt.Printf("✗ Failed to check plagiarism: %v\n", err)
+		fmt.Printf("- Failed to check plagiarism: %v\n", err)
 		return
 	}
 	if len(groups.Groups) == 0 {
@@ -627,7 +671,7 @@ func handlePlagiarism(apiClient *client.APIClient, args []string) {
 	}
 	fmt.Println()
 	fmt.Printf("Potential Plagiarism - %s\n", hackathon)
-	fmt.Println(strings.Repeat("─", 72))
+	fmt.Println(strings.Repeat("-", 72))
 	for i, g := range groups.Groups {
 		fmt.Printf("\nGroup %d (checksum: %s):\n", i+1, g.Checksum[:12])
 		for j, user := range g.Users {
@@ -635,4 +679,114 @@ func handlePlagiarism(apiClient *client.APIClient, args []string) {
 		}
 	}
 	fmt.Println()
+}
+
+func handleBatch(sm *client.SubmitManager, args []string) {
+	if len(args) == 0 {
+		fmt.Println("- Usage: batch <dir1> [dir2 ...]")
+		fmt.Println("  batch --all-commits <dir>")
+		return
+	}
+
+	if args[0] == "--all-commits" {
+		if len(args) < 2 {
+			fmt.Println("- Usage: batch --all-commits <project-dir>")
+			return
+		}
+		projectDir := args[1]
+		results := sm.SubmitAllCommits(projectDir)
+		printBatchResults(results)
+		return
+	}
+
+	results := sm.BatchSubmit(args, false)
+	printBatchResults(results)
+}
+
+func printBatchResults(results []client.BatchResult) {
+	success := 0
+	failed := 0
+	fmt.Println()
+	fmt.Println("==========================================")
+	fmt.Println("  BATCH SUBMISSION RESULTS")
+	fmt.Println("==========================================")
+	for _, r := range results {
+		if r.Success {
+			fmt.Printf("  + %s -> %s (commit: %s)\n", r.Dir, r.JobID, r.Commit[:12])
+			success++
+		} else {
+			fmt.Printf("  - %s: %s\n", r.Dir, r.Error)
+			failed++
+		}
+	}
+	fmt.Println()
+	fmt.Printf("  Total: %d | Success: %d | Failed: %d\n", len(results), success, failed)
+	fmt.Println()
+}
+
+func handleReport(sm *client.SubmitManager, args []string) {
+	opts := client.ReportOptions{
+		DaysBack:  30,
+		ShowTrend: false,
+	}
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--days" && i+1 < len(args) {
+			fmt.Sscanf(args[i+1], "%d", &opts.DaysBack)
+			i++
+		} else if args[i] == "--trend" {
+			opts.ShowTrend = true
+		} else if args[i] == "--days=30" || strings.HasPrefix(args[i], "--days=") {
+			fmt.Sscanf(args[i], "--days=%d", &opts.DaysBack)
+		} else {
+			opts.ChallengeFilter = args[i]
+		}
+	}
+
+	if err := sm.GenerateReport(opts); err != nil {
+		fmt.Printf("- Report failed: %v\n", err)
+	}
+}
+
+func handleHooks(args []string) {
+	if len(args) == 0 {
+		fmt.Println("- Usage: hooks install <pre-push|pre-commit>")
+		fmt.Println("  hooks uninstall <pre-push|pre-commit>")
+		fmt.Println("  hooks list")
+		return
+	}
+
+	gitDir, err := client.GetGitDir()
+	if err != nil {
+		fmt.Printf("- %v\n", err)
+		return
+	}
+
+	hm := client.NewHookManager(gitDir)
+
+	switch args[0] {
+	case "install":
+		hookType := "pre-push"
+		if len(args) > 1 {
+			hookType = args[1]
+		}
+		if err := hm.Install(hookType); err != nil {
+			fmt.Printf("- Hook install failed: %v\n", err)
+		}
+
+	case "uninstall":
+		hookType := "pre-push"
+		if len(args) > 1 {
+			hookType = args[1]
+		}
+		if err := hm.Uninstall(hookType); err != nil {
+			fmt.Printf("- Hook uninstall failed: %v\n", err)
+		}
+
+	case "list":
+		hm.List()
+
+	default:
+		fmt.Printf("Unknown hook command %q. Use: install, uninstall, list\n", args[0])
+	}
 }

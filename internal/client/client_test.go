@@ -261,17 +261,17 @@ func TestTerminalUI_StyleMethods(t *testing.T) {
 	ui.PrintLoadingSpinner("Loading...")
 }
 
-func TestStatusEmoji(t *testing.T) {
+func TestStatusSymbol(t *testing.T) {
 	tests := []struct {
 		status   string
 		expected string
 	}{
-		{"queued", "•"},
-		{"processing", "•"},
-		{"completed", "✓"},
-		{"failed", "✗"},
-		{"error", "✗"},
-		{"unknown", "•"},
+		{"queued", "*"},
+		{"processing", "*"},
+		{"completed", "+"},
+		{"failed", "-"},
+		{"error", "-"},
+		{"unknown", "*"},
 	}
 
 	for _, tt := range tests {

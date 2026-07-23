@@ -1,4 +1,4 @@
-# ft_hackthon — Hackathon Automated Grading System
+# ft_hackthon -- Hackathon Automated Grading System
 
 Automated grading system for hackathon projects. Four Docker services: **nginx** (TLS termination + load balancing), **api** (REST API), **worker** (background job processor), **backup** (PostgreSQL dumps).
 
@@ -17,8 +17,8 @@ See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for detailed usage.
 
 | Component | Directory | Description |
 |-----------|-----------|-------------|
-| CLI | `cmd/ft_hackthon/` | Terminal client (login, grademe, status, leaderboard, etc.) |
-| API | `cmd/api/` | REST API server (port 8000 internal) |
+| CLI | `cmd/ft_hackthon/` | Terminal client (interactive REPL + batch + CI/CD) |
+| API | `cmd/api/` | REST API server (port 8000 internal, WebSocket support) |
 | Worker | `cmd/worker/` | Background job processor (claims + grades jobs) |
 | Backups | `scripts/backup.sh` | Periodic pg_dump via Docker Compose `backup` service |
 
@@ -32,7 +32,7 @@ make docker-logs     # Tail all logs
 make docker-restart  # Rebuild + restart
 ```
 
-Services: `nginx:8000` (HTTP→HTTPS redirect) → `nginx:8443` (TLS) → `api:8000` → `postgres:5432`. Worker connects to Postgres directly for job claiming (SKIP LOCKED).
+Services: `nginx:8000` (HTTP->HTTPS redirect) -> `nginx:8443` (TLS) -> `api:8000` -> `postgres:5432`. Worker connects to Postgres directly for job claiming (SKIP LOCKED).
 
 ## Development
 
@@ -46,12 +46,14 @@ make clean           # Remove binaries
 
 ### Dependencies
 
-- `github.com/spf13/cobra` — CLI framework
-- `github.com/go-resty/resty/v2` — HTTP client
-- `github.com/jackc/pgx/v5` — PostgreSQL driver
-- `gopkg.in/yaml.v3` — YAML parsing
-- `golang.org/x/crypto` — bcrypt
-- `golang.org/x/term` — terminal input
+- `github.com/spf13/cobra` -- CLI framework
+- `github.com/chzyer/readline` -- REPL with history & tab completion
+- `github.com/go-resty/resty/v2` -- HTTP client
+- `github.com/gorilla/websocket` -- WebSocket client & server
+- `github.com/jackc/pgx/v5` -- PostgreSQL driver
+- `gopkg.in/yaml.v3` -- YAML parsing
+- `golang.org/x/crypto` -- bcrypt
+- `golang.org/x/term` -- terminal input
 
 ## Project Structure
 
@@ -59,14 +61,14 @@ make clean           # Remove binaries
 cmd/
   api/main.go              # REST API entry point
   worker/main.go           # Worker entry point
-  ft_hackthon/             # CLI (main.go, commands.go, repl.go, helpers.go)
+  ft_hackthon/             # CLI (main.go, repl.go, helpers.go)
 internal/
-  client/                  # API client (api.go, auth.go, submit.go, ui.go)
+  client/                  # API client (api.go, auth.go, submit.go, ui.go, websocket.go, batch.go, analytics.go, hooks.go)
   config/                  # Config management (config.go, server.go)
   database/                # DB interface + Postgres + InMemory + migrations
   gitea/                   # Gitea API client + interface
   grader/                  # Suite/challenge grading engine (run.go, grader.go)
-  handler/                 # HTTP handlers + middleware (rate limit, CORS, metrics, alerts)
+  handler/                 # HTTP handlers + middleware + WebSocket
   worker/                  # Job processor + circuit breaker
 testsuites/                # Test suite definitions (suite.yml per hackathon)
 nginx/                     # nginx config + entrypoint (self-signed TLS)
@@ -89,8 +91,42 @@ docs/                      # Full documentation
 | GET | `/api/v1/grade/leaderboard/{hackathon}` | Leaderboard |
 | GET | `/api/v1/grade/plagiarism/{hackathon}` | Duplicate check |
 | GET | `/api/v1/user/me` | Current user + rating |
-| GET | `/api/v1/metrics` | Prometheus metrics |
 | GET/POST | `/api/v1/alerts` | System alerts |
+| GET | `/api/v1/metrics` | Prometheus metrics |
+| WS | `/ws/grade/status/{job_id}` | Real-time job status |
+| WS | `/ws/grade/jobs` | Real-time jobs list |
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `login` | Authenticate with the server |
+| `register` | Create a new account |
+| `grademe` | Submit current project for grading |
+| `batch` | Submit multiple projects or all commits |
+| `status` | List your jobs or check a specific job |
+| `submissions` | Show submission history per challenge |
+| `leaderboard` | Show top scorers for a hackathon |
+| `plagiarism` | Check for duplicate submissions |
+| `diff` | View code submitted for a grading job |
+| `report` | Show submission analytics and trends |
+| `hooks` | Manage git hooks for auto-submission |
+| `whoami` | Show current user |
+| `rating` | Display your current Elo rating |
+| `logout` | Clear stored session |
+| `version` | Display version info |
+| `help` | Show help |
+
+## CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--api-url` | API base URL (default: https://localhost:8443/api/v1) |
+| `--insecure` | Skip TLS certificate verification |
+| `--verbose` | Enable verbose logging |
+| `--json` | Output in JSON format (for CI/CD) |
+| `--quiet` | Suppress non-essential output |
+| `--non-interactive` | Run in non-interactive mode (for CI/CD) |
 
 ## Configuration
 
@@ -126,11 +162,11 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (section "Adding a New Test Suite
 
 ## Documentation
 
-- [User Guide](docs/USER_GUIDE.md) — CLI usage, workflows, FAQ
-- [API Reference](docs/API.md) — Full endpoint spec
-- [Architecture](docs/ARCHITECTURE.md) — System design
-- [Development](docs/DEVELOPMENT.md) — Setup, testing, adding suites
-- [System Operations](docs/SYSTEM_OPERATIONS.md) — Deployment, monitoring, backup
+- [User Guide](docs/USER_GUIDE.md) -- CLI usage, workflows, FAQ
+- [API Reference](docs/API.md) -- Full endpoint spec
+- [Architecture](docs/ARCHITECTURE.md) -- System design
+- [Development](docs/DEVELOPMENT.md) -- Setup, testing, adding suites
+- [System Operations](docs/SYSTEM_OPERATIONS.md) -- Deployment, monitoring, backup
 
 ## License
 

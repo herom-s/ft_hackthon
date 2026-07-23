@@ -2,28 +2,31 @@
 
 ## Overview
 
-The `ft_hackthon` CLI is designed to provide a seamless, interactive experience for hackathon participants submitting their projects for automated grading.
+The `ft_hackthon` CLI is designed to provide a seamless, interactive experience for hackathon participants submitting their projects for automated grading. It supports both an interactive REPL and a non-interactive CI/CD mode.
 
 ## Components
 
-### 1. Command Layer (Cobra Framework)
+### 1. Command Layer (REPL + Cobra)
 
-Located in `cmd/ft_hackthon/commands.go` and `cmd/ft_hackthon/repl.go`, the command layer provides:
+Located in `cmd/ft_hackthon/repl.go` and `cmd/ft_hackthon/main.go`, the command layer provides:
 
-- **Command Registration** - All CLI commands are registered with Cobra
-- **Flag Management** - Global and command-specific flags
-- **Help Generation** - Automatic help text generation
-- **Error Handling** - Consistent error reporting
+- **Interactive REPL** - Tab completion, history, aliases, per-command help
+- **Non-interactive mode** - Direct command execution for CI/CD pipelines
+- **Flag Management** - Global flags (--api-url, --insecure, --verbose, --json, --quiet, --non-interactive)
+- **Help Generation** - Per-command help with usage and examples
 
 **Available Commands:**
 - `login` - Authenticate with credentials
 - `register` - Create a new account (prompts for hackathon selection)
 - `grademe` - Submit project for grading
+- `batch` - Submit multiple projects or all commits
 - `status` - Check job status
-- `leaderboard` - View top scorers for a hackathon
 - `submissions` - View submission history per challenge
+- `leaderboard` - View top scorers for a hackathon
 - `diff` - View code submitted for a job
 - `plagiarism` - Check for duplicate submissions
+- `report` - Show submission analytics and trends
+- `hooks` - Manage git hooks for auto-submission
 - `rating` - Display current Elo rating
 - `logout` - Clear authentication
 - `whoami` - Display current user
@@ -54,6 +57,17 @@ statusResp, err := apiClient.GetStatus(jobID)
 - Timeout handling
 - Error response parsing
 - Git integration (extracting commit SHA)
+
+#### websocket.go - WebSocket Client
+
+Provides real-time status updates with automatic fallback to HTTP polling:
+
+```go
+wsc := client.NewWSClient(baseURL, token)
+err := wsc.ListenStatus(jobID, func(s *StatusResponse) {
+    // Called on each status change
+})
+```
 
 #### auth.go - Authentication Management
 
@@ -89,12 +103,46 @@ err := submitManager.SubmitGradeJob()
 2. Check git repository validity
 3. Extract commit SHA with `git rev-parse HEAD`
 4. Send submission request to API
-5. Poll for status updates every 2 seconds
+5. Poll for status updates every 2 seconds (or use WebSocket)
 6. Display results in formatted output
+
+#### batch.go - Batch Submission
+
+Submit multiple projects or all commits of a project:
+
+```go
+// Submit multiple directories
+results := sm.BatchSubmit(dirs, false)
+
+// Submit all commits
+results := sm.SubmitAllCommits(projectDir)
+```
+
+#### analytics.go - Submission Reports
+
+Generate per-challenge analytics and trends:
+
+```go
+sm.GenerateReport(client.ReportOptions{
+    DaysBack:  30,
+    ShowTrend: true,
+})
+```
+
+#### hooks.go - Git Hooks Management
+
+Install/uninstall git hooks for auto-submission:
+
+```go
+hm := client.NewHookManager(projectDir)
+hm.Install("pre-push")
+hm.Uninstall("pre-commit")
+hm.List()
+```
 
 #### ui.go - Terminal UI Rendering
 
-Provides formatted terminal output:
+Provides formatted terminal output (all ASCII, no emoji):
 
 ```go
 ui := client.NewTerminalUI()
@@ -105,29 +153,28 @@ ui.PrintStatusUpdate(statusResp)
 // Print final results
 ui.PrintGradeResult(result)
 
-// Utility functions
-ui.PrintError("Error message")
-ui.PrintSuccess("Success message")
+// Print progress bar
+ui.PrintProgress(current, total, "Submitting")
 ```
 
 **Output Examples:**
 
 Status Update:
 ```
-⏳ STATUS: Queued - Waiting for grader availability...
+STATUS: Queued - Waiting for grader availability...
 ```
 
 Final Result:
 ```
-═══════════════════════════════════════════════
-            GRADING RESULTS
-═══════════════════════════════════════════════
+==================================================
+             GRADING RESULTS
+==================================================
 
- Parser Success ........................... ✓ YES
+ Parser Success ........................... YES
  Benchmark Speed ......................... 150 ms
  Final Score ............................ 95 points
 
-═══════════════════════════════════════════════
+==================================================
 ```
 
 ### 3. Configuration Layer
@@ -159,15 +206,15 @@ isAuth, err := config.IsAuthenticated()
 
 ```
 User Input (username/password)
-    ↓
+    |
 Masked Password Prompt (terminal.ReadPassword)
-    ↓
+    |
 API Request: POST /api/v1/auth/login
-    ↓
+    |
 Auth Token + Gitea Credentials Response
-    ↓
+    |
 Save to ~/.ft_hackthon/config.json (mode 0600)
-    ↓
+    |
 Display Success Message
 ```
 
@@ -175,42 +222,79 @@ Display Success Message
 
 ```
 User: ft_hackthon grademe
-    ↓
+    |
 Load Token from Config
-    ↓
+    |
 Read ft_hackthon.yml for suite (if present)
-    ↓
+    |
 Copy project files to workspace (~/ft_hackthon/workspace)
-    ↓
+    |
 git add, commit, push to Gitea
-    ↓
+    |
 Get Commit SHA (git rev-parse HEAD)
-    ↓
+    |
 API Request: POST /api/v1/grade/submit
-    ↓
+    |
 Job ID Response (202 Accepted)
-    ↓
-Start Polling Loop
-    ↓
-Every 2 seconds: GET /api/v1/grade/status/{job_id}
-    ↓
-Display Status Updates
-    ↓
+    |
+Start Monitoring (WebSocket preferred, HTTP polling fallback)
+    |
+Real-time Status Updates
+    |
 On Completion: Display Formatted Results
 ```
 
-### Status Polling Loop
+### Status Monitoring
 
-The polling mechanism has the following characteristics:
+The monitoring mechanism has the following characteristics:
 
-- **Interval** - 2 seconds between requests
-- **Max Attempts** - 300 attempts (10 minutes total)
+- **Primary**: WebSocket (`/ws/grade/status/{job_id}`) for real-time updates
+- **Fallback**: HTTP polling every 2 seconds
+- **Max Attempts**: 300 attempts (10 minutes total)
 - **States**:
   - `queued` - Waiting for grader availability
   - `processing` - Tests and benchmarks are running
   - `completed` - Grading finished successfully
   - `failed` - Grading failed (tests did not pass)
   - `error` - Grading encountered a system error
+
+### Batch Submission Flow
+
+```
+User: ft_hackthon batch <dir1> <dir2> ...
+    |
+For each directory:
+  | Verify it's a git repo
+  | Get commit SHA
+  | Copy files to workspace
+  | Push to Gitea
+  | Submit to API
+    |
+Display batch results summary
+```
+
+## CI/CD Integration
+
+The CLI supports non-interactive mode for CI/CD pipelines:
+
+```bash
+# JSON output for programmatic parsing
+ft_hackthon --json --non-interactive --insecure status
+
+# Exit codes (0 = success, 1 = failure)
+ft_hackthon --non-interactive --insecure grademe || exit 1
+```
+
+## Git Hooks
+
+Automate submissions with git hooks:
+
+```bash
+# Install pre-push hook
+ft_hackthon hooks install pre-push
+
+# Now every git push also runs grademe
+```
 
 ## Error Handling
 
@@ -265,6 +349,15 @@ cd ~/my-project  # Must be a git repo
 # Check job status
 ./bin/ft_hackthon status job-id-here
 
+# Test batch submission
+./bin/ft_hackthon batch ../project1 ../project2
+
+# Test analytics
+./bin/ft_hackthon report --trend
+
+# Test hooks
+./bin/ft_hackthon hooks list
+
 # Logout
 ./bin/ft_hackthon logout
 ```
@@ -276,6 +369,13 @@ ft_hackthon --api-url http://custom-server:8000/api/v1 login
 ft_hackthon --api-url http://custom-server:8000/api/v1 grademe
 ```
 
+### CI/CD Pipeline
+
+```bash
+./bin/ft_hackthon --non-interactive --json --insecure status
+./bin/ft_hackthon --non-interactive --insecure grademe
+```
+
 ## Performance Characteristics
 
 - **Login** - ~500ms (network dependent)
@@ -283,70 +383,10 @@ ft_hackthon --api-url http://custom-server:8000/api/v1 grademe
 - **Status Check** - ~200ms per poll
 - **Total Time to Results** - Depends on queue and processing time
 
-## Future Enhancements
+## Terminology
 
-### Enhanced TUI
-
-Implement `github.com/charmbracelet/bubbletea` for:
-- Interactive progress bars
-- Animated spinners
-- Real-time log streaming
-- Keyboard navigation
-
-### Advanced Features
-
-- Batch submission
-- Job history
-- Webhook notifications
-- WebSocket support for real-time updates
-- Detailed analytics and reports
-
-### Integration
-
-- CI/CD system integration
-- Git hooks integration
-- IDE plugin support
-- Slack/Discord notifications
-
-## Troubleshooting
-
-### "Not authenticated" Error
-
-```bash
-ft_hackthon login
-```
-
-### API Connection Failed
-
-```bash
-# Check if API is running
-curl http://localhost:8000/api/v1/health
-
-# Use custom endpoint if needed
-ft_hackthon --api-url http://your-api:8000/api/v1 grademe
-```
-
-### Git Repository Error
-
-```bash
-# Ensure you're in a git directory
-git status
-
-# Initialize if needed
-git init
-```
-
-### Token Expired
-
-```bash
-# Re-login to refresh token
-ft_hackthon login
-```
-
-## Code Organization Best Practices
-
-1. **Separation of Concerns** - Each file handles a specific responsibility
-2. **Error Propagation** - Errors bubble up with context
-3. **Configuration Isolation** - All config in dedicated package
-4. **Clean Interfaces** - Simple, focused public APIs
-5. **Documentation** - Comprehensive comments and examples
+All terminal output uses ASCII characters only:
+- `+` indicates success or completion
+- `-` indicates failure or error
+- `*` indicates neutral or in-progress status
+- `[!]` indicates a warning

@@ -6,64 +6,60 @@ import (
 	"time"
 )
 
-// TerminalUI handles all terminal output formatting
-type TerminalUI struct{}
-
-// NewTerminalUI creates a new terminal UI instance
-func NewTerminalUI() *TerminalUI {
-	return &TerminalUI{}
+type TerminalUI struct {
+	spinnerIdx int
+	spinner     []string
 }
 
-// PrintStatusUpdate prints a clean status update to the terminal
+func NewTerminalUI() *TerminalUI {
+	return &TerminalUI{
+		spinner: []string{"-", "\\", "|", "/"},
+	}
+}
+
 func (ui *TerminalUI) PrintStatusUpdate(status *StatusResponse) {
 	message := getStatusMessage(status.Status)
-
 	fmt.Printf("STATUS: %s\n", message)
 	if status.Message != "" {
 		fmt.Printf("  -> %s\n", status.Message)
 	}
 }
 
-// PrintGradeResult prints the final grading result in a formatted table
 func (ui *TerminalUI) PrintGradeResult(result *GradeResult) {
 	width := 50
 
-	fmt.Println(strings.Repeat("═", width))
+	fmt.Println(strings.Repeat("=", width))
 	fmt.Println(ui.centerText("GRADING RESULTS", width))
-	fmt.Println(strings.Repeat("═", width))
+	fmt.Println(strings.Repeat("=", width))
 	fmt.Println()
 
-	// Parser status
-	parserStatus := "✓ YES"
+	parserStatus := "YES"
 	if !result.ParserSuccess {
-		parserStatus = "✗ NO"
+		parserStatus = "NO"
 	}
 	ui.printTableRow("Parser Success", parserStatus, width)
 
-	// Benchmark speed
 	benchmarkStr := fmt.Sprintf("%d ms", result.BenchmarkMs)
 	ui.printTableRow("Benchmark Speed", benchmarkStr, width)
 
-	// Final score
 	scoreStr := fmt.Sprintf("%d points", result.FinalScore)
 	ui.printTableRow("Final Score", scoreStr, width)
 
 	fmt.Println()
-	fmt.Println(strings.Repeat("═", width))
+	fmt.Println(strings.Repeat("=", width))
 
 	if result.Details != "" {
 		fmt.Println("\nDetails:")
 		fmt.Printf("  %s\n", result.Details)
 	}
 
-	// Per-challenge breakdown
 	if len(result.Challenges) > 0 {
 		fmt.Println()
 		ui.PrintHeader("Challenge Results")
 		for _, ch := range result.Challenges {
-			status := "✓"
+			status := "+"
 			if !ch.Passed {
-				status = "✗"
+				status = "-"
 			}
 			scoreStr := fmt.Sprintf("%d/%d pts", ch.Points, ch.Points)
 			if !ch.Passed {
@@ -78,12 +74,11 @@ func (ui *TerminalUI) PrintGradeResult(result *GradeResult) {
 	}
 
 	fmt.Println()
-	fmt.Println("✓ Grading completed successfully!")
+	fmt.Println("+ Grading completed successfully!")
 }
 
-// printTableRow prints a single row in the results table
 func (ui *TerminalUI) printTableRow(label, value string, width int) {
-	availableSpace := width - len(label) - len(value) - 4 // 4 for " : " and padding
+	availableSpace := width - len(label) - len(value) - 4
 	if availableSpace < 0 {
 		availableSpace = 0
 	}
@@ -91,20 +86,16 @@ func (ui *TerminalUI) printTableRow(label, value string, width int) {
 	fmt.Printf(" %s %s %s\n", label, dots, value)
 }
 
-// centerText centers text within a given width
 func (ui *TerminalUI) centerText(text string, width int) string {
 	totalPadding := width - len(text)
 	leftPadding := totalPadding / 2
 	rightPadding := totalPadding - leftPadding
-
 	return strings.Repeat(" ", leftPadding) + text + strings.Repeat(" ", rightPadding)
 }
 
-// PrintLoadingSpinner prints a simple loading spinner
 func (ui *TerminalUI) PrintLoadingSpinner(message string) {
-	spinners := []string{"-", "\\", "|", "/"}
 	for i := 0; i < 4; i++ {
-		for _, s := range spinners {
+		for _, s := range ui.spinner {
 			fmt.Printf("\r%s %s", s, message)
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -112,19 +103,34 @@ func (ui *TerminalUI) PrintLoadingSpinner(message string) {
 	fmt.Println()
 }
 
-// getStatusSymbol returns a symbol for the current status
-func getStatusSymbol(status string) string {
-	switch status {
-	case "completed":
-		return "✓"
-	case "failed", "error":
-		return "✗"
-	default:
-		return "•"
+func (ui *TerminalUI) Spin() string {
+	s := ui.spinner[ui.spinnerIdx%len(ui.spinner)]
+	ui.spinnerIdx++
+	return s
+}
+
+func (ui *TerminalUI) PrintProgress(current, total int, prefix string) {
+	pct := float64(current) / float64(total) * 100
+	barWidth := 30
+	filled := int(float64(barWidth) * float64(current) / float64(total))
+	bar := strings.Repeat("#", filled) + strings.Repeat("-", barWidth-filled)
+	fmt.Printf("\r%s [%s] %d/%d (%.0f%%)", prefix, bar, current, total, pct)
+	if current >= total {
+		fmt.Println()
 	}
 }
 
-// getStatusMessage returns a human-readable message for the current status
+func getStatusSymbol(status string) string {
+	switch status {
+	case "completed":
+		return "+"
+	case "failed", "error":
+		return "-"
+	default:
+		return "*"
+	}
+}
+
 func getStatusMessage(status string) string {
 	switch status {
 	case "queued":
@@ -142,11 +148,10 @@ func getStatusMessage(status string) string {
 	}
 }
 
-// PrintHeader prints a section header
 func (ui *TerminalUI) PrintHeader(title string) {
 	fmt.Println()
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("--------------------------------------------")
 	fmt.Printf("  %s\n", title)
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("--------------------------------------------")
 	fmt.Println()
 }
