@@ -32,7 +32,6 @@ FROM alpine:latest AS worker
 WORKDIR /app
 RUN apk add --no-cache ca-certificates git docker-cli
 COPY --from=builder /app/bin/ft_hackthon-worker /app/ft_hackthon-worker
-USER nobody
 ENTRYPOINT ["/app/ft_hackthon-worker"]
 
 # CLI runtime stage
