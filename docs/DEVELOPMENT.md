@@ -527,6 +527,57 @@ run: "{binary}"
 | `build`    | Shell command to compile/build the test. Set to `""` if no build step is needed. |
 | `run`      | Shell command to execute the test. Must return exit code 0 for pass, non-zero for fail. |
 
+### Multi-Challenge Suite
+
+A suite can define multiple independent challenges. Create a `challenges/` subdirectory
+with one subdirectory per challenge, each containing a `challenge.yml`, `subject.txt`,
+and one or more test runners.
+
+```
+my-testsuites/
+  my-hackathon/
+    suite.yml
+    Dockerfile
+    challenges/
+      challenge-a/
+        challenge.yml
+        subject.txt
+        test_runner.c
+      challenge-b/
+        challenge.yml
+        subject.txt
+        test_runner.c
+```
+
+#### Challenge Descriptor (`challenge.yml`)
+
+```yaml
+name: challenge-a
+title: "Challenge A"
+points: 14
+target_dir: challenge-a
+```
+
+| Field        | Description |
+|--------------|-------------|
+| `name`       | Unique identifier for this challenge |
+| `title`      | Human-readable name shown in results |
+| `points`     | Points awarded for passing all tests |
+| `target_dir` | Subdirectory name in the workspace where user solutions go. If empty, solutions are expected in the workspace root. |
+
+#### Subject File (`subject.txt`)
+
+Describe the problem and include the exact path where users should place their solution:
+
+```
+Subject: Challenge A
+
+Write a function ...
+
+Place your solution in:
+    ~/ft_hackthon/workspace/challenge-a/solution.c
+```
+
 ### Template Variables
 
 | Variable           | Expands to |

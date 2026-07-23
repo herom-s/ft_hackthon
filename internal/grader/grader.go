@@ -57,6 +57,7 @@ type Challenge struct {
 	Name           string `yaml:"name"`
 	Title          string `yaml:"title"`
 	Points         int    `yaml:"points"`
+	TargetDir      string `yaml:"target_dir,omitempty"`
 	TimeoutSeconds int    `yaml:"timeout_seconds,omitempty"`
 	MemoryMB       int    `yaml:"memory_mb,omitempty"`
 	Dir            string `yaml:"-"`
@@ -193,18 +194,6 @@ func DetectSuite(workspaceDir string) *Suite {
 	return best
 }
 
-func DetectByFile(dir string, files ...string) bool {
-	for _, f := range files {
-		if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
-			return true
-		}
-	}
-	return false
-}
-
-// IsActive checks if the suite is currently accepting submissions
-// based on its time window (starts_at / ends_at in RFC3339 format).
-// Returns true if no time constraints are set.
 func (s *Suite) IsActive(now time.Time) (bool, string) {
 	if s.StartsAt != "" {
 		t, err := time.Parse(time.RFC3339, s.StartsAt)
@@ -308,11 +297,6 @@ func LoadSuite(dir string) (*Suite, error) {
 	}
 	s.Dir = dir
 	return &s, nil
-}
-
-func CollectCFiles(dir string) string {
-	matches, _ := filepath.Glob(filepath.Join(dir, "*.c"))
-	return strings.Join(matches, " ")
 }
 
 func CollectSuiteFiles(dir string) string {

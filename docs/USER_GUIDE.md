@@ -270,7 +270,35 @@ Your project workspace is at `~/ft_hackthon/workspace/`. This is your Gitea repo
 - The workspace starts empty (just a `.git` directory)
 - It contains a `.gitignore` that ignores `ft_hackthon.yml`
 - A `ft_hackthon.yml` file specifies which test suite (hackathon) to use
-- When you run `grademe`, your project files are copied here, committed, and pushed to Gitea
+- When you run `grademe`, your workspace files are committed and pushed to Gitea
+
+### Challenge Directory Structure
+
+Each challenge expects your solution in a specific subdirectory of the workspace.
+The subject file (saved to `~/ft_hackthon/<suite>/<challenge>.txt` after registration)
+tells you exactly where to place your code.
+
+Example layout for `code-marathon`:
+
+```
+~/ft_hackthon/workspace/
+  ft_hackthon.yml              # Suite config (auto-generated)
+  factorial/
+    factorial.c                # Your solution for the Factorial challenge
+  fibonacci/
+    fibonacci.c                # Your solution for the Fibonacci challenge
+  fibonacci_py/
+    fibonacci.py               # Your Python solution for Fibonacci
+  fizzbuzz/
+    fizzbuzz.c                 # Your solution for FizzBuzz
+  palindrome/
+    palindrome.c               # Your solution for Palindrome
+  prime/
+    prime.c                    # Your solution for the Prime challenge
+```
+
+If a challenge's `target_dir` is empty in its config, the solution goes directly
+in the workspace root. Each subject file includes the exact path.
 
 ### ft_hackthon.yml
 

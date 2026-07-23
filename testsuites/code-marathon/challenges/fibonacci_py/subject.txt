@@ -5,6 +5,9 @@ Write a function that returns the n-th Fibonacci number.
 Function signature:
     def fibonacci(n: int) -> int:
 
+Place your solution in:
+    ~/ft_hackthon/workspace/fibonacci_py/fibonacci.py
+
 Parameters:
     n: zero-based index in the Fibonacci sequence
 

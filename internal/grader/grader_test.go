@@ -197,22 +197,6 @@ func TestGrade_WorkspaceConfigFallsBack(t *testing.T) {
 	}
 }
 
-func TestDetectByFile(t *testing.T) {
-	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "test.c"), []byte("int main(){}"), 0644)
-	os.WriteFile(filepath.Join(dir, "test.py"), []byte("print('hi')"), 0644)
-
-	if !DetectByFile(dir, "test.c") {
-		t.Error("expected DetectByFile to find test.c")
-	}
-	if !DetectByFile(dir, "test.py") {
-		t.Error("expected DetectByFile to find test.py")
-	}
-	if DetectByFile(dir, "nonexistent.go") {
-		t.Error("expected DetectByFile to not find nonexistent.go")
-	}
-}
-
 func TestDetectSuite(t *testing.T) {
 	suiteRoot := createSuiteRoot(t, "libft", "libft.h",
 		"name: libft\nlanguage: c\ndetect: [libft.h]\nbuild: gcc\nrun: run\n",
@@ -438,21 +422,6 @@ func TestGrade_NoSuite(t *testing.T) {
 	}
 	if result.ParserSuccess {
 		t.Error("expected failure when no suite configured")
-	}
-}
-
-func TestCollectCFiles(t *testing.T) {
-	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.c"), []byte(""), 0644)
-	os.WriteFile(filepath.Join(dir, "b.c"), []byte(""), 0644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte(""), 0644)
-
-	files := CollectCFiles(dir)
-	if files == "" {
-		t.Fatal("expected non-empty file list")
-	}
-	if !contains(files, "a.c") || !contains(files, "b.c") {
-		t.Error("expected a.c and b.c in file list")
 	}
 }
 

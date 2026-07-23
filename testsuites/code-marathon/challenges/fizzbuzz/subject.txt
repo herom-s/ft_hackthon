@@ -5,6 +5,9 @@ Write a function that prints the FizzBuzz game result for a given number.
 Prototype:
     void fizzbuzz(int n, char *out);
 
+Place your solution in:
+    ~/ft_hackthon/workspace/fizzbuzz/fizzbuzz.c
+
 Parameters:
     n: the number to evaluate
     out: buffer to write the result (must be at least 12 bytes)

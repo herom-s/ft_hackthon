@@ -5,6 +5,9 @@ Write a function that checks if a string is a palindrome.
 Prototype:
     int is_palindrome(const char *s);
 
+Place your solution in:
+    ~/ft_hackthon/workspace/palindrome/palindrome.c
+
 Parameters:
     s: null-terminated string to check
 

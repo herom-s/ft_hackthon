@@ -5,6 +5,9 @@ Write a function that checks if a number is prime.
 Prototype:
     int is_prime(int n);
 
+Place your solution in:
+    ~/ft_hackthon/workspace/prime/prime.c
+
 Parameters:
     n: integer to check
 

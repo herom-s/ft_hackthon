@@ -1,3 +1,4 @@
 name: fibonacci
 title: "Fibonacci"
 points: 14
+target_dir: fibonacci

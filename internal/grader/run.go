@@ -89,7 +89,11 @@ func GradeChallenges(suite *Suite, workspaceDir string) *Result {
 
 	for _, ch := range challenges {
 		totalPoints += ch.Points
-		chDir := filepath.Join(workspaceDir, ch.Name)
+		challengeDir := ch.TargetDir
+		if challengeDir == "" {
+			challengeDir = ch.Name
+		}
+		chDir := filepath.Join(workspaceDir, challengeDir)
 		if _, err := os.Stat(chDir); os.IsNotExist(err) {
 			results = append(results, ChallengeResult{
 				Name:    ch.Name,
