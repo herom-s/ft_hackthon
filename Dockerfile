@@ -3,42 +3,43 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Install git for go get commands
 RUN apk add --no-cache git ca-certificates
 
-# Copy go mod files
 COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
-# Download dependencies
-RUN go mod download
-
-# Copy source code
 COPY . .
 
-# Tidy and build binaries
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-api ./cmd/api && \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-api   ./cmd/api && \
     CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-worker ./cmd/worker && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-cli ./cmd/ft_hackthon
+    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/ft_hackthon-cli    ./cmd/ft_hackthon
 
 # API runtime stage
-FROM alpine:latest AS api
+FROM gcr.io/distroless/static-debian12:nonroot AS api
 WORKDIR /app
-RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/bin/ft_hackthon-api /app/ft_hackthon-api
 EXPOSE 8000
-CMD ["/app/ft_hackthon-api"]
+USER nonroot:nonroot
+ENTRYPOINT ["/app/ft_hackthon-api"]
 
-# Worker runtime stage
+# Worker runtime stage (needs git + docker-cli)
 FROM alpine:latest AS worker
 WORKDIR /app
 RUN apk add --no-cache ca-certificates git docker-cli
 COPY --from=builder /app/bin/ft_hackthon-worker /app/ft_hackthon-worker
-CMD ["/app/ft_hackthon-worker"]
+USER nobody
+ENTRYPOINT ["/app/ft_hackthon-worker"]
 
 # CLI runtime stage
-FROM alpine:latest AS cli
+FROM gcr.io/distroless/static-debian12:nonroot AS cli
 WORKDIR /app
-RUN apk add --no-cache ca-certificates git
 COPY --from=builder /app/bin/ft_hackthon-cli /app/ft_hackthon-cli
+USER nonroot:nonroot
 ENTRYPOINT ["/app/ft_hackthon-cli"]
+
+# CLI standalone binary extraction (docker build --output=bin/ --target=cli-binary .)
+FROM scratch AS cli-binary
+COPY --from=builder /app/bin/ft_hackthon-cli /ft_hackthon

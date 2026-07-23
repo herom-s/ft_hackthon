@@ -147,6 +147,12 @@ docker-clean: ## Remove all Docker resources (containers, volumes, images)
 	docker compose down --volumes --remove-orphans
 	@echo "$(GREEN)✓ Docker resources removed$(NC)"
 
+docker-cli-binary: ## Extract standalone CLI binary (outputs to ./bin/ft_hackthon)
+	@echo "$(BLUE)Extracting standalone CLI binary...$(NC)"
+	docker build --output=bin/ --target=cli-binary .
+	@mv bin/ft_hackthon bin/ft_hackthon-cli 2>/dev/null || true
+	@echo "$(GREEN)✓ CLI binary extracted to bin/ft_hackthon-cli$(NC)"
+
 # Cleanup
 clean: ## Clean build artifacts and workspace
 	@echo "$(BLUE)Cleaning...$(NC)"
