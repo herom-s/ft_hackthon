@@ -62,12 +62,7 @@ func NewAPIClient(baseURL string) *APIClient {
 
 // SetInsecureSkipVerify configures the client to skip TLS verification
 func (ac *APIClient) SetInsecureSkipVerify() {
-	if tr, ok := ac.client.GetClient().Transport.(*http.Transport); ok {
-		if tr.TLSClientConfig == nil {
-			tr.TLSClientConfig = &tls.Config{}
-		}
-		tr.TLSClientConfig.InsecureSkipVerify = true
-	}
+	ac.client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 }
 
 // SetToken sets the authentication token
