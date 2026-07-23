@@ -384,7 +384,8 @@ make setup
 make fmt lint vet test build
 ```
 
-The CLI also supports CI/CD directly with `--non-interactive` and `--json` flags:
+The CLI also supports non-interactive mode with `--non-interactive` and `--json` flags.
+All REPL commands work in non-interactive mode:
 
 ```bash
 # Non-interactive grading in CI
@@ -392,6 +393,12 @@ ft_hackthon --non-interactive --insecure grademe
 
 # Parse results programmatically
 ft_hackthon --json --non-interactive --insecure status | jq .
+
+# Batch submission, diff, plagiarism, reports
+ft_hackthon --non-interactive --insecure batch ~/projects/project-a
+ft_hackthon --non-interactive --insecure diff <job_id>
+ft_hackthon --non-interactive --insecure plagiarism libft-tester
+ft_hackthon --non-interactive --insecure report --trend
 ```
 
 ## Performance Optimization

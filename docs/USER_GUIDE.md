@@ -212,15 +212,40 @@ ft_hackthon rating
 ft_hackthon --help
 ```
 
-### CI/CD Integration
+### Non-Interactive Mode
+
+All REPL commands work in non-interactive mode for scripting and CI/CD:
 
 ```bash
-# Non-interactive mode (for CI pipelines)
+# Submit for grading
 ft_hackthon --non-interactive grademe
+
+# Check status
+ft_hackthon --non-interactive status
+ft_hackthon --non-interactive status <job_id>
+
+# Batch submission
+ft_hackthon --non-interactive batch ~/projects/project-a
+ft_hackthon --non-interactive batch --all-commits .
+
+# View submissions and diffs
+ft_hackthon --non-interactive submissions
+ft_hackthon --non-interactive diff <job_id>
+
+# Leaderboard, plagiarism check, reports
+ft_hackthon --non-interactive leaderboard libft-tester
+ft_hackthon --non-interactive plagiarism libft-tester
+ft_hackthon --non-interactive report --trend
+
+# Account info
+ft_hackthon --non-interactive whoami
+ft_hackthon --non-interactive rating
+ft_hackthon --non-interactive logout
 
 # JSON output (for programmatic consumption)
 ft_hackthon --json status
 ft_hackthon --json leaderboard libft-tester
+ft_hackthon --json submissions
 
 # Quiet mode (suppress non-essential output)
 ft_hackthon --quiet grademe

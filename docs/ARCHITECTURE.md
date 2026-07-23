@@ -263,11 +263,38 @@ Display batch results summary
 
 ## CI/CD Integration
 
-The CLI supports non-interactive mode for CI/CD pipelines:
+The CLI supports non-interactive mode for CI/CD pipelines. All REPL commands are available:
 
 ```bash
-# JSON output for programmatic parsing
+# Submit for grading
+ft_hackthon --non-interactive --insecure grademe
+
+# Check status (with optional job ID)
 ft_hackthon --json --non-interactive --insecure status
+ft_hackthon --non-interactive --insecure status <job_id>
+
+# Batch submission
+ft_hackthon --non-interactive --insecure batch ~/projects/project-a
+ft_hackthon --non-interactive --insecure batch --all-commits .
+
+# View submissions
+ft_hackthon --non-interactive --insecure submissions
+ft_hackthon --non-interactive --insecure diff <job_id>
+
+# Leaderboard, plagiarism, reports
+ft_hackthon --non-interactive --insecure leaderboard libft-tester
+ft_hackthon --non-interactive --insecure plagiarism libft-tester
+ft_hackthon --non-interactive --insecure report --trend
+
+# Auth management (login/register are interactive token flows)
+ft_hackthon --non-interactive --insecure whoami
+ft_hackthon --non-interactive --insecure rating
+ft_hackthon --non-interactive --insecure logout
+
+# JSON output for programmatic parsing (supported on most commands)
+ft_hackthon --json --non-interactive --insecure status
+ft_hackthon --json --non-interactive --insecure submissions
+ft_hackthon --json --non-interactive --insecure leaderboard libft-tester
 
 # Exit codes (0 = success, 1 = failure)
 ft_hackthon --non-interactive --insecure grademe || exit 1

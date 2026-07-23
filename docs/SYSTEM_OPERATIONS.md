@@ -514,12 +514,25 @@ curl http://localhost:8000/api/v1/grade/status/<job_id> \
 
 ### Method 6: CI/CD Integration
 
+All REPL commands work in non-interactive mode:
+
 ```bash
 # Non-interactive grading
 ./bin/ft_hackthon --non-interactive --insecure grademe
 
 # JSON output for programmatic parsing
 ./bin/ft_hackthon --json --non-interactive --insecure status
+./bin/ft_hackthon --json --non-interactive --insecure submissions
+./bin/ft_hackthon --json --non-interactive --insecure leaderboard libft-tester
+
+# Batch submission, plagiarism, reports
+./bin/ft_hackthon --non-interactive --insecure batch ~/projects/project-a
+./bin/ft_hackthon --non-interactive --insecure plagiarism libft-tester
+./bin/ft_hackthon --non-interactive --insecure report --trend
+
+# Account management
+./bin/ft_hackthon --non-interactive --insecure whoami
+./bin/ft_hackthon --non-interactive --insecure rating
 ```
 
 ---
