@@ -1,4 +1,4 @@
-.PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker clean test fmt lint run-api run-cli deps docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean
+.PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker clean test fmt lint run-api run-cli deps docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary release
 
 # Variables
 GOCMD=go
@@ -152,6 +152,46 @@ docker-cli-binary: ## Extract standalone CLI binary (outputs to ./bin/ft_hacktho
 	docker build --output=bin/ --target=cli-binary .
 	@mv bin/ft_hackthon bin/ft_hackthon-cli 2>/dev/null || true
 	@echo "$(GREEN)✓ CLI binary extracted to bin/ft_hackthon-cli$(NC)"
+
+# Release
+PLATFORMS ?= linux/amd64 darwin/amd64 darwin/arm64
+DIST_DIR ?= dist
+
+release: ## Create a new GitHub release. Usage: make release VERSION=v0.1.0
+	@if [ -z "$(VERSION)" ]; then echo "$(YELLOW)Usage: make release VERSION=v0.1.0$(NC)"; exit 1; fi
+	@echo "$(BLUE)Preparing release $(VERSION)...$(NC)"
+	@mkdir -p $(DIST_DIR)
+	@rm -rf $(DIST_DIR)/*
+	@echo "$(BLUE)Building for all platforms...$(NC)"
+	@for plat in $(PLATFORMS); do \
+		os=$$(echo $$plat | cut -d/ -f1); \
+		arch=$$(echo $$plat | cut -d/ -f2); \
+		ext=""; \
+		[ "$$os" = "windows" ] && ext=".exe"; \
+		output="$(DIST_DIR)/ft_hackthon-$$os-$$arch$$ext"; \
+		echo "  $$output"; \
+		GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 go build -o $$output ./cmd/ft_hackthon; \
+	done
+	@echo "$(BLUE)Generating release notes...$(NC)"
+	@prev=$$(git describe --tags --abbrev=0 2>/dev/null || echo ""); \
+	if [ -n "$$prev" ]; then \
+		echo "## What's Changed" > $(DIST_DIR)/NOTES.md; \
+		git log $$prev..HEAD --oneline --no-decorate >> $(DIST_DIR)/NOTES.md; \
+	else \
+		echo "## Initial Release" > $(DIST_DIR)/NOTES.md; \
+	fi; \
+	echo "" >> $(DIST_DIR)/NOTES.md; \
+	echo "**Full Changelog**: https://github.com/herom-s/ft_hackthon/compare/$$prev...$(VERSION)" >> $(DIST_DIR)/NOTES.md
+	@echo "$(BLUE)Creating tag and pushing...$(NC)"
+	git tag -a $(VERSION) -m "Release $(VERSION)"
+	git push origin $(VERSION)
+	@echo "$(BLUE)Creating GitHub release...$(NC)"
+	@gh release create $(VERSION) \
+		--title "$(VERSION)" \
+		--notes-file $(DIST_DIR)/NOTES.md \
+		$(DIST_DIR)/ft_hackthon-*
+	@echo "$(GREEN)✓ Release $(VERSION) published$(NC)"
+	@echo "$(GREEN)  https://github.com/herom-s/ft_hackthon/releases/tag/$(VERSION)$(NC)"
 
 # Cleanup
 clean: ## Clean build artifacts and workspace

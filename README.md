@@ -13,6 +13,26 @@ make docker-up                    # Build & start all services
 
 See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for detailed usage.
 
+## Download
+
+Pre-built binaries for Linux and macOS are available on the [releases page](https://github.com/herom-s/ft_hackthon/releases):
+
+```bash
+# Linux
+curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-linux-amd64
+chmod +x ft_hackthon-linux-amd64 && ./ft_hackthon-linux-amd64
+
+# macOS (Apple Silicon)
+curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-darwin-arm64
+chmod +x ft_hackthon-darwin-arm64 && ./ft_hackthon-darwin-arm64
+```
+
+Or extract from the Docker image:
+
+```bash
+make docker-cli-binary  # Extracts CLI binary to bin/ft_hackthon-cli
+```
+
 ## Components
 
 | Component | Directory | Description |
