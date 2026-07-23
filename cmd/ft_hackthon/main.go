@@ -302,7 +302,7 @@ func main() {
 func init() {
 	rootCmd.PersistentFlags().StringVar(&apiBaseURL, "api-url", "https://localhost:8443/api/v1", "API base URL")
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose logging")
-	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "Skip TLS verification (also switches https:// to http://)")
+	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "Skip TLS certificate verification")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format (for CI/CD)")
 	rootCmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "Suppress non-essential output")
 	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "Run in non-interactive mode (for CI/CD)")
