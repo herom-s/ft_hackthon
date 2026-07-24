@@ -1,0 +1,33 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.github/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'herom-s'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: root
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/ft_hackthon
+            git pull origin main
+            git log --oneline -3
+            docker compose down --remove-orphans
+            docker compose up -d --build
+            echo "Deploy complete"

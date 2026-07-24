@@ -98,6 +98,34 @@ make lint            # golangci-lint
 make clean           # Remove binaries
 ```
 
+## CI/CD
+
+GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| **CI** (`ci.yml`) | Push/PR to `main` | `go build ./...`, `go vet ./...`, `go test ./...`, golangci-lint |
+| **Release** (`release.yml`) | Tag `v*` | Builds CLI binaries for linux/darwin × amd64/arm64, creates GitHub Release, deploys to VM |
+| **Deploy** (`deploy.yml`) | Push to `main` | Pulls code on VM, rebuilds Docker containers |
+
+### Required GitHub Secrets
+
+For auto-deploy to work, add these in the repo → **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|--------|-------|
+| `VM_HOST` | Your VM IP (e.g. `165.227.118.186`) |
+| `VM_SSH_KEY` | Private SSH key for root access (use `SSH_KEY_NAME` from `.env`) |
+
+### Creating a release
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Only tag when CLI code changes (per [release policy](.vscode/AGENTS.md)).
+
 ## Project Structure
 
 ```
