@@ -138,8 +138,11 @@ services:
     image: nginx:alpine
     container_name: ft-hackthon-nginx
     ports:
+      - "80:80"
       - "${NGINX_HTTP_PORT:-8000}:8000"
       - "${NGINX_HTTPS_PORT:-8443}:8443"
+    environment:
+      - DOMAIN=${DOMAIN:-}
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/entrypoint.sh:/entrypoint.sh:ro

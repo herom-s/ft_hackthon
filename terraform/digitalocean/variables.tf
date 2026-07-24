@@ -10,6 +10,12 @@ variable "size" {
   default     = "s-1vcpu-2gb"
 }
 
+variable "domain" {
+  description = "Your domain (e.g. hackthon.example.com) — enables Let's Encrypt + removes need for --insecure"
+  type        = string
+  default     = ""
+}
+
 variable "repo_url" {
   description = "Git repository URL"
   type        = string
