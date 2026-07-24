@@ -41,7 +41,7 @@ This starts six services: traefik (TLS + Let's Encrypt), api (REST + WebSocket),
 
 | Service | Internal | External (via VM port forwards) |
 |---------|----------|----------------------------------|
-| traefik | :80 (HTTP→HTTPS), :8443 (TLS) | :8342 (HTTP), :8343 (HTTPS) |
+| traefik | :80 (HTTP→HTTPS), :8443 (TLS) | :80 redirects to TLS, :8343 (HTTPS) |
 | api | :8000 | — |
 | postgres | :5432 | — |
 | gitea | :3000 | :3222 |

@@ -139,7 +139,7 @@ services:
     container_name: ft-hackthon-traefik
     ports:
       - "80:80"
-      - "${NGINX_HTTPS_PORT:-8443}:8443"
+      - "${TRAEFIK_HTTPS_PORT:-8443}:8443"
     environment:
       - DOMAIN=${DOMAIN:-}
     volumes:

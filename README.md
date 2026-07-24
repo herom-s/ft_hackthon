@@ -60,8 +60,7 @@ chmod +x ft_hackthon-linux-amd64 && ./ft_hackthon-linux-amd64
 | `DIGITALOCEAN_TOKEN` | — | API token for `make deploy` |
 | `CLOUD_PROVIDER` | `digitalocean` | Cloud for `make deploy` (aws, gcp, azure) |
 | `API_PORT` | `8000` | Internal API port |
-| `NGINX_HTTP_PORT` | `8342` | Host HTTP port (redirects to HTTPS) |
-| `NGINX_HTTPS_PORT` | `8343` | Host HTTPS port |
+| `TRAEFIK_HTTPS_PORT` | `8343` | Host HTTPS port (TLS) |
 | `POSTGRES_USER` | `ft_hackthon` | PostgreSQL user |
 | `POSTGRES_PASSWORD` | `ft_hackthon` | PostgreSQL password |
 | `GITEA_ADMIN_USER` | `ft_hackthon` | Gitea admin username |
