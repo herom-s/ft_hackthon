@@ -22,7 +22,7 @@ services:
     volumes:
       - gitea-data:/data
     ports:
-      - "3000:3000"
+      - "${GITEA_PORT:-3222}:3000"
     networks:
       - ft-hackthon-network
     healthcheck:
