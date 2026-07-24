@@ -32,11 +32,6 @@ entryPoints:
 providers:
   file:
     filename: /etc/traefik/dynamic.yml
-
-tls:
-  certificates:
-    - certFile: $CERT_PEM
-      keyFile: $CERT_KEY
 EOF
 
 if [ -n "$DOMAIN" ]; then
