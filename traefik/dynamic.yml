@@ -5,6 +5,12 @@ tls:
 
 http:
   routers:
+    api-http:
+      rule: "HostRegexp(`{host:.+}`)"
+      service: api
+      entryPoints:
+        - web
+
     api:
       rule: "HostRegexp(`{host:.+}`)"
       service: api
