@@ -34,7 +34,11 @@ echo 'DOMAIN=hackthon.yourdomain.com' >> .env
 make deploy-destroy && make deploy
 ```
 
-Traefik auto-provisions a Let's Encrypt certificate. Then:
+Traefik auto-provisions a Let's Encrypt certificate.
+
+**Important**: After first deploy with `DOMAIN` set, you must change your domain's nameservers at the registrar to DigitalOcean's (`ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com`). The A record is managed automatically by terraform.
+
+Then:
 
 ```bash
 ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login

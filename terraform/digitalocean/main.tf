@@ -37,6 +37,20 @@ resource "digitalocean_droplet" "this" {
   monitoring = true
 }
 
+resource "digitalocean_domain" "this" {
+  count      = var.domain != "" ? 1 : 0
+  name       = var.domain
+  ip_address = digitalocean_droplet.this.ipv4_address
+}
+
+resource "digitalocean_record" "www" {
+  count  = var.domain != "" ? 1 : 0
+  domain = digitalocean_domain.this[0].id
+  type   = "A"
+  name   = "www"
+  value  = digitalocean_droplet.this.ipv4_address
+}
+
 output "ip" {
   value = digitalocean_droplet.this.ipv4_address
 }
@@ -46,5 +60,5 @@ output "ssh_command" {
 }
 
 output "api_url" {
-  value = "https://${digitalocean_droplet.this.ipv4_address}:8343/api/v1"
+  value = var.domain != "" ? "https://${var.domain}:8343/api/v1" : "https://${digitalocean_droplet.this.ipv4_address}:8343/api/v1"
 }
