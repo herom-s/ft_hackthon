@@ -1,6 +1,6 @@
 # ft_hackthon — Hackathon Automated Grading System
 
-Automated grading system for hackathon projects. Docker services: **nginx** (TLS), **api** (REST + WebSocket), **worker** (background grading), **backup** (PostgreSQL dumps).
+Automated grading system for hackathon projects. Docker services: **traefik** (TLS + Let's Encrypt), **api** (REST + WebSocket), **worker** (background grading), **backup** (PostgreSQL dumps).
 
 ## Quick Start
 
@@ -99,7 +99,7 @@ make clean           # Remove binaries
 cmd/        ft_hackthon/ (CLI), api/, worker/
 internal/   client/, config/, database/, gitea/, grader/, handler/, worker/
 terraform/  digitalocean/, aws/, gcp/, azure/  (OpenTofu configs per cloud)
-nginx/      nginx.conf + entrypoint.sh (Let's Encrypt support)
+traefik/     Traefik config + entrypoint (auto Let's Encrypt)
 testsuites/ Suite definitions (suite.yml per hackathon)
 docs/       User guide, API ref, architecture, operations, development
 ```

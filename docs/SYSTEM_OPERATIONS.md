@@ -37,11 +37,11 @@ git clone <repo> && cd ft_hackthon
 make docker-up           # Build images + start all services
 ```
 
-This starts six services: nginx (TLS), api (REST + WebSocket), worker (background grading), postgres, gitea, backup.
+This starts six services: traefik (TLS + Let's Encrypt), api (REST + WebSocket), worker (background grading), postgres, gitea, backup.
 
 | Service | Internal | External (via VM port forwards) |
 |---------|----------|----------------------------------|
-| nginx | :8000 (HTTP→HTTPS), :8443 (TLS) | :8342 (HTTP), :8343 (HTTPS) |
+| traefik | :80 (HTTP→HTTPS), :8443 (TLS) | :8342 (HTTP), :8343 (HTTPS) |
 | api | :8000 | — |
 | postgres | :5432 | — |
 | gitea | :3000 | :3222 |
@@ -72,8 +72,8 @@ cd ~/my-project && ./bin/ft_hackthon-cli --insecure grademe
 
 ### With a domain (no --insecure)
 
-Set `DOMAIN=hackthon.yourdomain.com` in `.env` before `make deploy`. The nginx
-entrypoint auto-provisions a Let's Encrypt certificate via acme.sh.
+Set `DOMAIN=hackthon.yourdomain.com` in `.env` before `make deploy`. Traefik
+auto-provisions a Let's Encrypt certificate.
 
 ```bash
 make deploy
@@ -680,7 +680,7 @@ kill -9 <PID>
 - [x] Add request logging/tracing
 - [x] Implement health checks (DB ping, component status response)
 - [x] Add database migrations
-- [x] Set up load balancing for API (nginx reverse proxy)
+- [x] Set up load balancing for API (Traefik reverse proxy)
 - [x] Scale worker with multiple instances (PostgreSQL SKIP LOCKED)
 - [x] Implement job queue (PostgreSQL as queue)
 - [x] Add monitoring and alerts
