@@ -5,9 +5,9 @@ variable "region" {
 }
 
 variable "size" {
-  description = "Droplet size (s-2vcpu-4gb = $24/mo, enough for ~20 users)"
+  description = "Droplet size (s-1vcpu-2gb = $12/mo, minimum for grading to work)"
   type        = string
-  default     = "s-2vcpu-4gb"
+  default     = "s-1vcpu-2gb"
 }
 
 variable "repo_url" {
