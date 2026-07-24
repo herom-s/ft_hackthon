@@ -144,7 +144,6 @@ services:
       - DOMAIN=${DOMAIN:-}
     volumes:
       - ./traefik/entrypoint.sh:/entrypoint.sh:ro
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
       - traefik-data:/etc/traefik
     entrypoint: /bin/sh
     command: /entrypoint.sh
