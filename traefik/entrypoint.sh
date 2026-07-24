@@ -12,7 +12,8 @@ if [ ! -f "$CERT_KEY" ] || [ ! -f "$CERT_PEM" ]; then
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$CERT_KEY" \
     -out "$CERT_PEM" \
-    -subj "/CN=${DOMAIN:-ft-hackthon.local}/O=ft_hackthon/C=FR"
+    -subj "/CN=${DOMAIN:-ft-hackthon.local}/O=ft_hackthon/C=FR" \
+    -addext "subjectAltName=DNS:${DOMAIN:-ft-hackthon.local},DNS:localhost"
   echo "Generated self-signed certificate"
 fi
 
