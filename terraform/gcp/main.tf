@@ -12,6 +12,7 @@ locals {
       - systemctl enable --now docker
       - git clone ${var.repo_url} /opt/ft_hackthon
       - cd /opt/ft_hackthon
+      - cp .env.example .env
       - PUBLIC_IP=$(curl -s http://ifconfig.me)
       - sed -i "s|GITEA_PUBLIC_URL=.*|GITEA_PUBLIC_URL=http://$PUBLIC_IP:3222|" .env
       - docker compose up -d --build
