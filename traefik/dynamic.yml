@@ -6,7 +6,7 @@ tls:
 http:
   routers:
     api:
-      rule: "HostRegexp(`{host:.+}`)"
+      rule: "HostRegexp(`.+`)"
       service: api
       entryPoints:
         - websecure
