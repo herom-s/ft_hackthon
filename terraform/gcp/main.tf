@@ -47,20 +47,6 @@ resource "google_compute_instance" "this" {
   }
 }
 
-data "cloudflare_zone" "this" {
-  count = var.domain != "" ? 1 : 0
-  name  = join(".", slice(split(".", var.domain), 1, length(split(".", var.domain))))
-}
-
-resource "cloudflare_record" "this" {
-  count   = var.domain != "" ? 1 : 0
-  zone_id = data.cloudflare_zone.this[0].id
-  name    = split(".", var.domain)[0]
-  type    = "A"
-  value   = google_compute_instance.this.network_interface[0].access_config[0].nat_ip
-  proxied = false
-}
-
 output "ip" {
   value = google_compute_instance.this.network_interface[0].access_config[0].nat_ip
 }

@@ -70,20 +70,6 @@ resource "aws_instance" "this" {
   tags = { Name = "ft-hackthon" }
 }
 
-data "cloudflare_zone" "this" {
-  count = var.domain != "" ? 1 : 0
-  name  = join(".", slice(split(".", var.domain), 1, length(split(".", var.domain))))
-}
-
-resource "cloudflare_record" "this" {
-  count   = var.domain != "" ? 1 : 0
-  zone_id = data.cloudflare_zone.this[0].id
-  name    = split(".", var.domain)[0]
-  type    = "A"
-  value   = aws_instance.this.public_ip
-  proxied = false
-}
-
 output "ip" {
   value = aws_instance.this.public_ip
 }

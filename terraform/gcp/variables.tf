@@ -16,12 +16,6 @@ variable "size" {
   default     = "e2-medium"
 }
 
-variable "domain" {
-  description = "Optional domain name (creates Cloudflare A record)"
-  type        = string
-  default     = ""
-}
-
 variable "repo_url" {
   description = "Git repository URL"
   type        = string

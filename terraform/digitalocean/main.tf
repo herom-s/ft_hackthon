@@ -25,20 +25,6 @@ resource "digitalocean_droplet" "this" {
   monitoring = true
 }
 
-data "cloudflare_zone" "this" {
-  count = var.domain != "" ? 1 : 0
-  name  = join(".", slice(split(".", var.domain), 1, length(split(".", var.domain))))
-}
-
-resource "cloudflare_record" "this" {
-  count   = var.domain != "" ? 1 : 0
-  zone_id = data.cloudflare_zone.this[0].id
-  name    = split(".", var.domain)[0]
-  type    = "A"
-  value   = digitalocean_droplet.this.ipv4_address
-  proxied = false
-}
-
 output "ip" {
   value = digitalocean_droplet.this.ipv4_address
 }
