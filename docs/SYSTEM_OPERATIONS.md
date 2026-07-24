@@ -37,40 +37,47 @@ git clone <repo> && cd ft_hackthon
 make docker-up           # Build images + start all services
 ```
 
-This starts four services: nginx (TLS termination), api (REST + WebSocket), worker (background grading), backup (periodic pg_dump).
+This starts six services: nginx (TLS), api (REST + WebSocket), worker (background grading), postgres, gitea, backup.
 
-| Service  | Internal | External (via VM port forwards) |
-|----------|----------|----------------------------------|
-| nginx    | :8000 (HTTP->HTTPS redirect), :8443 (TLS) | :8342 (HTTP), :8343 (HTTPS) |
-| api      | :8000    | — |
-| postgres | :5432    | — |
-| gitea    | :3000    | :3222 |
+| Service | Internal | External (via VM port forwards) |
+|---------|----------|----------------------------------|
+| nginx | :8000 (HTTP→HTTPS), :8443 (TLS) | :8342 (HTTP), :8343 (HTTPS) |
+| api | :8000 | — |
+| postgres | :5432 | — |
+| gitea | :3000 | :3222 |
 
 ### Obtaining the CLI
 
-Users download the CLI binary — no Go toolchain needed:
-
 ```bash
-# Via Go (if you have it)
+# Via Go
 go install github.com/herom-s/ft_hackthon/cmd/ft_hackthon@latest
 
-# Pre-built binary (choose your platform)
+# Pre-built binary
 curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-linux-amd64
 chmod +x ft_hackthon-linux-amd64 && ./ft_hackthon-linux-amd64
 
-# Extract from the Docker image (on the server)
+# Extract from Docker image (on the server)
 make docker-cli-binary
-# Writes to bin/ft_hackthon-cli
 ```
 
-### Quick Start (Single Terminal)
+### Quick Start
 
 ```bash
 cd <repo-dir>
-make docker-up                                # Start all services
-./bin/ft_hackthon --insecure register         # Create an account
-./bin/ft_hackthon --insecure login            # Login
-cd ~/my-project && ./ft_hackthon --insecure grademe
+make docker-up
+./bin/ft_hackthon-cli --insecure register
+./bin/ft_hackthon-cli --insecure login
+cd ~/my-project && ./bin/ft_hackthon-cli --insecure grademe
+```
+
+### With a domain (no --insecure)
+
+Set `DOMAIN=hackthon.yourdomain.com` in `.env` before `make deploy`. The nginx
+entrypoint auto-provisions a Let's Encrypt certificate via acme.sh.
+
+```bash
+make deploy
+ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
 ```
 
 ---

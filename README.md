@@ -1,205 +1,116 @@
-# ft_hackthon -- Hackathon Automated Grading System
+# ft_hackthon — Hackathon Automated Grading System
 
-Automated grading system for hackathon projects. Four Docker services: **nginx** (TLS termination + load balancing), **api** (REST API), **worker** (background job processor), **backup** (PostgreSQL dumps).
+Automated grading system for hackathon projects. Docker services: **nginx** (TLS), **api** (REST + WebSocket), **worker** (background grading), **backup** (PostgreSQL dumps).
 
 ## Quick Start
 
 ```bash
 git clone <repo> && cd ft_hackthon
-make docker-up                    # Build & start all services
-./bin/ft_hackthon --insecure login  # Or: make run-cli
-./bin/ft_hackthon --insecure grademe
+make docker-up                         # Build & start all services
+make docker-cli-binary                 # Extract CLI from Docker image
+./bin/ft_hackthon-cli --insecure login
+./bin/ft_hackthon-cli --insecure grademe
 ```
 
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for detailed usage.
-
-## Download
-
-Pre-built binaries for Linux and macOS are available on the [releases page](https://github.com/herom-s/ft_hackthon/releases):
+## Deploy to a Cloud VM
 
 ```bash
-# Via Go (any platform, requires Go)
+# 1. Add your DigitalOcean token to .env
+echo 'DIGITALOCEAN_TOKEN=your_token' >> .env
+
+# 2. Deploy (creates a $12/mo droplet in nyc3)
+make deploy
+
+# 3. Use the CLI from any machine
+ft_hackthon --insecure --api-url https://<vm-ip>:8343/api/v1 login
+```
+
+### With a domain (no --insecure needed)
+
+```bash
+echo 'DOMAIN=hackthon.yourdomain.com' >> .env
+make deploy-destroy && make deploy
+```
+
+The entrypoint auto-provisions a Let's Encrypt certificate via acme.sh. Then:
+
+```bash
+ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
+```
+
+See [docs/SYSTEM_OPERATIONS.md](docs/SYSTEM_OPERATIONS.md) for multi-cloud (AWS/GCP/Azure) via OpenTofu.
+
+## Download the CLI
+
+Pre-built binaries on the [releases page](https://github.com/herom-s/ft_hackthon/releases):
+
+```bash
 go install github.com/herom-s/ft_hackthon/cmd/ft_hackthon@latest
 
-# Linux (direct download)
+# Or direct download
 curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-linux-amd64
 chmod +x ft_hackthon-linux-amd64 && ./ft_hackthon-linux-amd64
-
-# macOS (Apple Silicon)
-curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-darwin-arm64
-chmod +x ft_hackthon-darwin-arm64 && ./ft_hackthon-darwin-arm64
 ```
 
-Or extract from the Docker image:
+## Configuration (`.env`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOMAIN` | `""` | Your domain → enables Let's Encrypt HTTPS |
+| `DIGITALOCEAN_TOKEN` | — | API token for `make deploy` |
+| `CLOUD_PROVIDER` | `digitalocean` | Cloud for `make deploy` (aws, gcp, azure) |
+| `API_PORT` | `8000` | Internal API port |
+| `NGINX_HTTP_PORT` | `8342` | Host HTTP port (redirects to HTTPS) |
+| `NGINX_HTTPS_PORT` | `8343` | Host HTTPS port |
+| `POSTGRES_USER` | `ft_hackthon` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | `ft_hackthon` | PostgreSQL password |
+| `GITEA_ADMIN_USER` | `ft_hackthon` | Gitea admin username |
+| `GITEA_ADMIN_PASSWORD` | `changeme123` | Gitea admin password |
+| `GITEA_ORG` | `moulinerie` | Gitea organization |
+| `GITEA_PUBLIC_URL` | `http://localhost:3000` | Public Gitea URL (set by cloud-init on deploy) |
+| `WORKER_ID` | hostname | Worker instance identity |
+| `BACKUP_INTERVAL` | `86400` | Backup interval (seconds) |
+| `BACKUP_RETENTION_DAYS` | `7` | Backup retention |
+
+## Docker
 
 ```bash
-make docker-cli-binary  # Extracts CLI binary to bin/ft_hackthon-cli
-```
-
-### Creating a New Release
-
-Push a version tag and GitHub Actions handles the rest:
-
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
-
-The workflow builds for linux/amd64, darwin/amd64, darwin/arm64 and publishes a release with auto-generated changelog.
-
-## Components
-
-| Component | Directory | Description |
-|-----------|-----------|-------------|
-| CLI | `cmd/ft_hackthon/` | Terminal client (interactive REPL + batch + CI/CD) |
-| API | `cmd/api/` | REST API server (port 8000 internal, WebSocket support) |
-| Worker | `cmd/worker/` | Background job processor (claims + grades jobs) |
-| Backups | `scripts/backup.sh` | Periodic pg_dump via Docker Compose `backup` service |
-
-## Docker (recommended)
-
-```bash
-make docker-up       # Build images + start all services
-make docker-down     # Stop all containers
-make docker-clean    # Stop + remove volumes (resets all data)
-make docker-logs     # Tail all logs
+make docker-up       # Build + start
+make docker-down     # Stop
 make docker-restart  # Rebuild + restart
+make docker-logs     # Tail logs
+make docker-clean    # Stop + remove volumes (resets all data)
+make docker-cli-binary  # Extract CLI from Docker image
 ```
-
-Services: `nginx:8000` (HTTP->HTTPS redirect) -> `nginx:8443` (TLS) -> `api:8000` -> `postgres:5432`. Worker connects to Postgres directly for job claiming (SKIP LOCKED).
 
 ## Development
 
 ```bash
 make build           # Build all Go binaries
-make test            # Run all tests
+make test            # Run tests
 make fmt             # gofmt
 make lint            # golangci-lint
 make clean           # Remove binaries
 ```
 
-### Dependencies
-
-- `github.com/spf13/cobra` -- CLI framework
-- `github.com/chzyer/readline` -- REPL with history & tab completion
-- `github.com/go-resty/resty/v2` -- HTTP client
-- `github.com/gorilla/websocket` -- WebSocket client & server
-- `github.com/jackc/pgx/v5` -- PostgreSQL driver
-- `gopkg.in/yaml.v3` -- YAML parsing
-- `golang.org/x/crypto` -- bcrypt
-- `golang.org/x/term` -- terminal input
-
 ## Project Structure
 
 ```
-cmd/
-  api/main.go              # REST API entry point
-  worker/main.go           # Worker entry point
-  ft_hackthon/             # CLI (main.go, repl.go, helpers.go)
-internal/
-  client/                  # API client (api.go, auth.go, submit.go, ui.go, websocket.go, batch.go, analytics.go)
-  config/                  # Config management (config.go, server.go)
-  database/                # DB interface + Postgres + InMemory + migrations
-  gitea/                   # Gitea API client + interface
-  grader/                  # Suite/challenge grading engine (run.go, grader.go)
-  handler/                 # HTTP handlers + middleware + WebSocket
-  worker/                  # Job processor + circuit breaker
-testsuites/                # Test suite definitions (suite.yml per hackathon)
-nginx/                     # nginx config + entrypoint (self-signed TLS)
-scripts/                   # backup.sh, restore.sh
-docs/                      # Full documentation
+cmd/        ft_hackthon/ (CLI), api/, worker/
+internal/   client/, config/, database/, gitea/, grader/, handler/, worker/
+terraform/  digitalocean/, aws/, gcp/, azure/  (OpenTofu configs per cloud)
+nginx/      nginx.conf + entrypoint.sh (Let's Encrypt support)
+testsuites/ Suite definitions (suite.yml per hackathon)
+docs/       User guide, API ref, architecture, operations, development
 ```
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/health` | Health check (DB ping) |
-| POST | `/api/v1/auth/login` | Login |
-| POST | `/api/v1/auth/register` | Register |
-| POST | `/api/v1/grade/submit` | Submit project |
-| GET | `/api/v1/grade/status/{id}` | Job status |
-| GET | `/api/v1/grade/jobs` | List my jobs |
-| GET | `/api/v1/grade/suites` | List test suites |
-| GET | `/api/v1/grade/suites/{suite}/challenges` | List challenges |
-| GET | `/api/v1/grade/leaderboard/{hackathon}` | Leaderboard |
-| GET | `/api/v1/grade/plagiarism/{hackathon}` | Duplicate check |
-| GET | `/api/v1/user/me` | Current user + rating |
-| GET/POST | `/api/v1/alerts` | System alerts |
-| GET | `/api/v1/metrics` | Prometheus metrics |
-| WS | `/ws/grade/status/{job_id}` | Real-time job status |
-| WS | `/ws/grade/jobs` | Real-time jobs list |
-
-## CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `login` | Authenticate with the server |
-| `register` | Create a new account |
-| `grademe` | Submit current project for grading |
-| `batch` | Submit multiple projects or all commits |
-| `status` | List your jobs or check a specific job |
-| `submissions` | Show submission history per challenge |
-| `leaderboard` | Show top scorers for a hackathon |
-| `plagiarism` | Check for duplicate submissions |
-| `diff` | View code submitted for a grading job |
-| `report` | Show submission analytics and trends |
-| `whoami` | Show current user |
-| `rating` | Display your current Elo rating |
-| `logout` | Clear stored session |
-| `version` | Display version info |
-| `help` | Show help |
-
-## CLI Flags
-
-| Flag | Description |
-|------|-------------|
-| `--api-url` | API base URL (default: https://localhost:8443/api/v1) |
-| `--insecure` | Skip TLS certificate verification |
-| `--verbose` | Enable verbose logging |
-| `--json` | Output in JSON format (for CI/CD) |
-| `--quiet` | Suppress non-essential output |
-| `--non-interactive` | Run in non-interactive mode (for CI/CD) |
-
-## Configuration
-
-Environment variables (`.env`):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_PORT` | `8000` | Internal API port |
-| `NGINX_HTTP_PORT` | `8000` | Host HTTP port (redirects to HTTPS) |
-| `NGINX_HTTPS_PORT` | `8443` | Host HTTPS port (TLS) |
-| `DATABASE_URL` | `postgres://ft_hackthon:ft_hackthon@postgres:5432/ft_hackthon?sslmode=disable` | Postgres DSN |
-| `GITEA_ADMIN_USER` | `admin` | Gitea admin username |
-| `GITEA_ADMIN_PASSWORD` | `changeme123` | Gitea admin password |
-| `GITEA_ORG` | `ft_hackthon` | Gitea organization |
-| `GITEA_PUBLIC_URL` | `http://localhost:3000` | Public Gitea URL (for clone URLs) |
-| `WORKER_ID` | hostname | Worker instance identity |
-| `BACKUP_INTERVAL` | `86400` | Backup interval (seconds) |
-| `BACKUP_RETENTION_DAYS` | `7` | Backup retention |
-
-## Adding a Test Suite
-
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (section "Adding a New Test Suite").
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `tls: certificate signed by unknown authority` | Add `--insecure` flag to CLI |
-| `container name already in use` | `docker rm -f <container>` or `make docker-clean` |
-| `connect: connection refused` | Ensure services are up: `make docker-up` |
-| Gitea clone fails | Verify `GITEA_PUBLIC_URL` matches host-accessible address |
-| Build fails | `make clean && make deps && make build` |
 
 ## Documentation
 
-- [User Guide](docs/USER_GUIDE.md) -- CLI usage, workflows, FAQ
-- [API Reference](docs/API.md) -- Full endpoint spec
-- [Architecture](docs/ARCHITECTURE.md) -- System design
-- [Development](docs/DEVELOPMENT.md) -- Setup, testing, adding suites
-- [System Operations](docs/SYSTEM_OPERATIONS.md) -- Deployment, monitoring, backup
+- [User Guide](docs/USER_GUIDE.md)
+- [API Reference](docs/API.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Development](docs/DEVELOPMENT.md)
+- [System Operations](docs/SYSTEM_OPERATIONS.md)
 
 ## License
 
