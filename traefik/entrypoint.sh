@@ -42,7 +42,7 @@ EOF
 http:
   routers:
     api:
-      rule: "HostRegexp('.+')"
+      rule: "Host(\`$DOMAIN\`)"
       service: api
       entryPoints:
         - websecure
