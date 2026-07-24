@@ -18,7 +18,10 @@ See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for detailed usage.
 Pre-built binaries for Linux and macOS are available on the [releases page](https://github.com/herom-s/ft_hackthon/releases):
 
 ```bash
-# Linux
+# Via Go (any platform, requires Go)
+go install github.com/herom-s/ft_hackthon/cmd/ft_hackthon@latest
+
+# Linux (direct download)
 curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-linux-amd64
 chmod +x ft_hackthon-linux-amd64 && ./ft_hackthon-linux-amd64
 

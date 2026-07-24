@@ -1,4 +1,4 @@
-.PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker clean test fmt lint run-api run-cli deps docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary
+.PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker clean test fmt lint run-api run-cli deps docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary deploy deploy-info deploy-destroy
 
 # Variables
 GOCMD=go
@@ -169,6 +169,29 @@ watch: ## Watch for changes and rebuild
 	@echo "$(BLUE)Watching for changes...$(NC)"
 	@which entr > /dev/null || (echo "$(YELLOW)Installing entr...$(NC)" && go install github.com/cortesi/entr/cmd/entr@latest)
 	find . -name "*.go" | entr -r make build-cli
+
+# Deployment (multi-cloud via OpenTofu)
+deploy: ## Deploy to cloud. Set CLOUD_PROVIDER=digitalocean|aws|gcp|azure in .env
+	@echo "$(BLUE)Deploying via OpenTofu...$(NC)"
+	@if ! command -v tofu >/dev/null 2>&1; then \
+		echo "$(YELLOW)OpenTofu not found. Installing...$(NC)" && \
+		(brew install opentofu 2>/dev/null || sudo snap install opentofu --classic 2>/dev/null || \
+		echo "Install: https://opentofu.org/docs/cli/install/" && exit 1); fi
+	@set -a; . $(PWD)/.env 2>/dev/null || true; set +a; \
+		PROVIDER="$${CLOUD_PROVIDER:-digitalocean}"; \
+		if [ ! -d "terraform/$$PROVIDER" ]; then echo "Unknown provider: $$PROVIDER (choose: digitalocean, aws, gcp, azure)" && exit 1; fi; \
+		echo "Provider: $$PROVIDER"; \
+		cd terraform/$$PROVIDER && tofu init && tofu apply
+	@echo "$(GREEN)✓ Deployed. Run 'make deploy-info' for VM IP.$(NC)"
+
+deploy-info: ## Show deployed VM info
+	@set -a; . $(PWD)/.env 2>/dev/null || true; set +a; \
+		cd terraform/$${CLOUD_PROVIDER:-digitalocean} && tofu output
+
+deploy-destroy: ## Destroy the VM
+	@set -a; . $(PWD)/.env 2>/dev/null || true; set +a; \
+		cd terraform/$${CLOUD_PROVIDER:-digitalocean} && tofu destroy
+	@echo "$(GREEN)✓ VM destroyed$(NC)"
 
 # Documentation
 docs: ## Generate documentation

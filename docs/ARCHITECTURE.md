@@ -266,6 +266,12 @@ Display batch results summary
 The CLI supports non-interactive mode for CI/CD pipelines. All REPL commands are available:
 
 ```bash
+# Register (non-interactive prompts for username/password)
+ft_hackthon --non-interactive --insecure register
+
+# Login (non-interactive prompts for credentials)
+ft_hackthon --non-interactive --insecure login
+
 # Submit for grading
 ft_hackthon --non-interactive --insecure grademe
 

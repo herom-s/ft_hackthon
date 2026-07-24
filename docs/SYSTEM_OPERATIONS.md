@@ -21,45 +21,56 @@
               +----------------+
 ```
 
-## Running the Complete System
+## Prerequisites
 
-### Prerequisites
-
-- Go 1.21+ (go.mod specifies 1.25)
+- Docker & Docker Compose
 - Make
-- Git (for example with real repositories)
-- curl (for API testing)
+- Git
+- Go 1.21+ (go.mod specifies 1.25) — only needed for local development
+
+## Production Deployment (Docker Compose)
+
+The entire system runs in Docker. Clone the repo and start all services:
+
+```bash
+git clone <repo> && cd ft_hackthon
+make docker-up           # Build images + start all services
+```
+
+This starts four services: nginx (TLS termination), api (REST + WebSocket), worker (background grading), backup (periodic pg_dump).
+
+| Service  | Internal | External (via VM port forwards) |
+|----------|----------|----------------------------------|
+| nginx    | :8000 (HTTP->HTTPS redirect), :8443 (TLS) | :8342 (HTTP), :8343 (HTTPS) |
+| api      | :8000    | — |
+| postgres | :5432    | — |
+| gitea    | :3000    | :3222 |
+
+### Obtaining the CLI
+
+Users download the CLI binary — no Go toolchain needed:
+
+```bash
+# Via Go (if you have it)
+go install github.com/herom-s/ft_hackthon/cmd/ft_hackthon@latest
+
+# Pre-built binary (choose your platform)
+curl -LO https://github.com/herom-s/ft_hackthon/releases/latest/download/ft_hackthon-linux-amd64
+chmod +x ft_hackthon-linux-amd64 && ./ft_hackthon-linux-amd64
+
+# Extract from the Docker image (on the server)
+make docker-cli-binary
+# Writes to bin/ft_hackthon-cli
+```
 
 ### Quick Start (Single Terminal)
 
 ```bash
-# Build everything
 cd <repo-dir>
-make build
-
-# In one terminal, start the API
-./bin/ft_hackthon-api
-
-# In another terminal, start the worker
-./bin/ft_hackthon-worker
-
-# In a third terminal, use the CLI
-ft_hackthon login
-ft_hackthon grademe
-```
-
-### Running with Make
-
-```bash
-# Terminal 1: API Server
-make run-api
-
-# Terminal 2: Worker
-make run-worker
-
-# Terminal 3: CLI
-make run-cli ARGS="login"
-make run-cli ARGS="grademe"
+make docker-up                                # Start all services
+./bin/ft_hackthon --insecure register         # Create an account
+./bin/ft_hackthon --insecure login            # Login
+cd ~/my-project && ./ft_hackthon --insecure grademe
 ```
 
 ---
@@ -68,17 +79,29 @@ make run-cli ARGS="grademe"
 
 ### Scenario: Student Submits Project for Grading
 
-#### Step 1: Student Logs In
+#### Step 1: Student Registers and Logs In
 
 **User Command:**
 ```bash
-$ ft_hackthon login
-Username: alice@example.com
+$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1 register
+Username: alice
 Password: ************
+Confirm: ************
++ Account created. You can now log in.
 
-Authenticating...
-+ Successfully logged in as alice@example.com
-+ Token saved to ~/.ft_hackthon/config.json
+$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1 login
+Username: alice
+Password: ************
++ Successfully logged in as alice
+```
+
+**System Flow:**
+```
+CLI
+  +- POST /api/v1/auth/register {username, password}
+  |    +- API creates Gitea user + repo
+  |    +- Returns auth token + Gitea credentials
+  +- Save token to ~/.ft_hackthon/config.json
 ```
 
 **System Flow:**
@@ -111,7 +134,8 @@ nothing to commit, working tree clean
 
 **User Command:**
 ```bash
-$ ft_hackthon grademe
+$ ft_hackthon --insecure grademe
+Pushing workspace code to Gitea...
 Pushed commit: a1b2c3d4e5f6a7b8c9d0
 + Job ID: job-abc123def456
 
@@ -234,11 +258,23 @@ Job Found:
        +- Create temp directory
        +- git clone <GiteaCloneURL> <tmpdir>/repo
        +- git checkout <CommitSHA>
-       +- grader.Grade(workspaceDir, suite):
-       |   +- Detect suite -> load suite config
-       |   +- Build test binary (gcc/make)
-       |   +- Run tests, measure benchmark time
-       |   +- Calculate score, generate result
+        +- grader.Grade(workspaceDir, suite):
+        |   +- gradeSuite(suite, workspaceDir):
+        |   |   +- If suite has challenges/: GradeChallenges (per-challenge grading)
+        |   |   +- Otherwise: RunSuite (single test runner)
+        |   +- Detect language, collect user files
+        |   +- For each challenge:
+        |   |   +- Check target_dir exists in workspace
+        |   |   +- gradeSingleChallenge:
+        |   |   |   +- Detect language (C/Python/etc)
+        |   |   |   +- Collect user files by pattern (*.c, *.py)
+        |   |   |   +- If suite has Dockerfile:
+        |   |   |   |   +- Build suite Docker image
+        |   |   |   |   +- Copy user files + test runner to temp dir
+        |   |   |   |   +- docker create + docker cp + docker start
+        |   |   |   +- Otherwise run locally with timeout
+        |   |   +- Parse test output (tests_run/tests_passed)
+        |   +- Calculate final score (% of earned points)
        +- Return *database.Result
 
 Update Elo Rating (if parser passed):
@@ -365,6 +401,16 @@ version            # Show version
 help               # Show help
 ```
 
+**Global Flags:**
+```
+--api-url <url>       API base URL (default: https://localhost:8443/api/v1)
+--insecure            Skip TLS verification (required for self-signed certs)
+--verbose             Enable verbose logging
+--json                JSON output (for CI/CD)
+--quiet               Suppress non-essential output
+--non-interactive     Run command without REPL (for CI/CD)
+```
+
 **Features:**
 - Secure password input
 - Token persistence
@@ -449,16 +495,37 @@ help               # Show help
 
 ## Testing the System
 
-### Method 1: Manual End-to-End
+### Method 1: Docker Compose (production-like)
 
 ```bash
-# Terminal 1
+# Build and start all services
+make docker-up
+
+# Run CLI commands
+make docker-cli-binary   # Extract CLI binary from Docker image
+./bin/ft_hackthon-cli --insecure register
+./bin/ft_hackthon-cli --insecure grademe
+
+# View logs
+make docker-logs
+
+# Stop everything
+make docker-down
+```
+
+### Method 2: Manual (development)
+
+```bash
+# Terminal 1: Start dependencies (Postgres, Gitea)
+docker compose up -d postgres gitea
+
+# Terminal 2: API
 make run-api
 
-# Terminal 2
+# Terminal 3: Worker
 make run-worker
 
-# Terminal 3
+# Terminal 4: CLI
 make run-cli ARGS="login"
 make run-cli ARGS="grademe"
 ```
@@ -517,6 +584,12 @@ curl http://localhost:8000/api/v1/grade/status/<job_id> \
 All REPL commands work in non-interactive mode:
 
 ```bash
+# Register (non-interactive prompts for username/password)
+ft_hackthon --non-interactive --insecure register
+
+# Login (non-interactive prompts for credentials)
+ft_hackthon --non-interactive --insecure login
+
 # Non-interactive grading
 ./bin/ft_hackthon --non-interactive --insecure grademe
 
@@ -533,6 +606,7 @@ All REPL commands work in non-interactive mode:
 # Account management
 ./bin/ft_hackthon --non-interactive --insecure whoami
 ./bin/ft_hackthon --non-interactive --insecure rating
+./bin/ft_hackthon --non-interactive --insecure logout
 ```
 
 ---
