@@ -17,7 +17,7 @@ locals {
 }
 
 resource "digitalocean_droplet" "this" {
-  image      = "ubuntu-24-04"
+  image      = "ubuntu-24-04-x64"
   name       = "ft-hackthon"
   region     = var.region
   size       = var.size
