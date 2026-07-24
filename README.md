@@ -15,13 +15,15 @@ make docker-cli-binary                 # Extract CLI from Docker image
 ## Deploy to a Cloud VM
 
 ```bash
-# 1. Add your DigitalOcean token to .env
 echo 'DIGITALOCEAN_TOKEN=your_token' >> .env
 
-# 2. Deploy (creates a $12/mo droplet in nyc3)
+# 2. Optionally set a domain for Let's Encrypt
+echo 'DOMAIN=hackthon.yourdomain.com' >> .env
+
+# 3. Deploy (creates a $12/mo droplet in nyc3)
 make deploy
 
-# 3. Use the CLI from any machine
+# 4. Use the CLI (--insecure only needed if no domain)
 ft_hackthon --insecure --api-url https://<vm-ip>:8343/api/v1 login
 ```
 
@@ -32,7 +34,7 @@ echo 'DOMAIN=hackthon.yourdomain.com' >> .env
 make deploy-destroy && make deploy
 ```
 
-The entrypoint auto-provisions a Let's Encrypt certificate via acme.sh. Then:
+Traefik auto-provisions a Let's Encrypt certificate. Then:
 
 ```bash
 ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
