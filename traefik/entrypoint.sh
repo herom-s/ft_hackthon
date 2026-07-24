@@ -26,7 +26,7 @@ providers:
 EOF
 
 if [ -n "$DOMAIN" ]; then
-  # ACME mode — no static cert, router triggers LE challenge
+  # ACME mode
   cat >> /etc/traefik/traefik.yml <<EOF
 
 certificatesResolvers:
@@ -48,8 +48,6 @@ http:
         - websecure
       tls:
         certResolver: le
-        domains:
-          - main: $DOMAIN
 
   services:
     api:
