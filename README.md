@@ -124,8 +124,6 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
-Only tag when CLI code changes (per [release policy](.vscode/AGENTS.md)).
-
 ## Project Structure
 
 ```
