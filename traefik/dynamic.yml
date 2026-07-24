@@ -6,7 +6,7 @@ tls:
 http:
   routers:
     api:
-      rule: "Host(`fthackthon.dev`) || Host(`165.227.118.186`)"
+      rule: "HostRegexp(`{host:.+}`)"
       service: api
       entryPoints:
         - websecure
