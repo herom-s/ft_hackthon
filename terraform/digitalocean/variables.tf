@@ -21,3 +21,9 @@ variable "repo_url" {
   type        = string
   default     = "https://github.com/herom-s/ft_hackthon.git"
 }
+
+variable "ssh_key_name" {
+  description = "Name of your SSH key in DigitalOcean (for root SSH access)"
+  type        = string
+  default     = ""
+}

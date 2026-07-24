@@ -181,7 +181,7 @@ deploy: ## Deploy to cloud. Set CLOUD_PROVIDER=digitalocean|aws|gcp|azure in .en
 		PROVIDER="$${CLOUD_PROVIDER:-digitalocean}"; \
 		if [ ! -d "terraform/$$PROVIDER" ]; then echo "Unknown provider: $$PROVIDER (choose: digitalocean, aws, gcp, azure)" && exit 1; fi; \
 		echo "Provider: $$PROVIDER"; \
-		cd terraform/$$PROVIDER && tofu init && tofu apply -var="domain=$${DOMAIN:-}"
+		cd terraform/$$PROVIDER && tofu init && tofu apply -var="domain=$${DOMAIN:-}" -var="ssh_key_name=$${SSH_KEY_NAME:-}"
 	@echo "$(GREEN)✓ Deployed. Run 'make deploy-info' for VM IP.$(NC)"
 
 deploy-info: ## Show deployed VM info

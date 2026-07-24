@@ -22,11 +22,17 @@ locals {
   EOF
 }
 
+data "digitalocean_ssh_key" "user" {
+  count = var.ssh_key_name != "" ? 1 : 0
+  name  = var.ssh_key_name
+}
+
 resource "digitalocean_droplet" "this" {
   image      = "ubuntu-24-04-x64"
   name       = "ft-hackthon"
   region     = var.region
   size       = var.size
+  ssh_keys   = var.ssh_key_name != "" ? [data.digitalocean_ssh_key.user[0].id] : []
   user_data  = local.cloud_init
   monitoring = true
 }
