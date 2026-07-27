@@ -11,9 +11,10 @@ locals {
       - git clone ${var.repo_url} /opt/ft_hackthon
       - cd /opt/ft_hackthon
       - cp .env.example .env
+      - 'test -n "${var.domain}" && sed -i "s|^DOMAIN=.*|DOMAIN=${var.domain}|" .env || true'
       - PUBLIC_IP=$(curl -s http://ifconfig.me)
       - sed -i "s|GITEA_PUBLIC_URL=.*|GITEA_PUBLIC_URL=http://$PUBLIC_IP:3222|" .env
-      - docker compose up -d --build
+      - docker compose up -d
   EOF
 }
 
@@ -29,6 +30,14 @@ data "aws_ami" "ubuntu" {
 resource "aws_security_group" "this" {
   name        = "ft-hackthon"
   description = "ft_hackthon grading system"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "http" {
+  security_group_id = aws_security_group.this.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "main" {
@@ -66,6 +75,7 @@ resource "aws_instance" "this" {
   instance_type               = var.size
   user_data                   = local.cloud_init
   user_data_replace_on_change = true
+  key_name                    = var.ssh_key_name
   vpc_security_group_ids      = [aws_security_group.this.id]
   associate_public_ip_address = true
   tags = { Name = "ft-hackthon" }

@@ -10,6 +10,18 @@ variable "size" {
   default     = "t3.small"
 }
 
+variable "domain" {
+  description = "Domain for Let's Encrypt HTTPS (set DOMAIN in .env)"
+  type        = string
+  default     = ""
+}
+
+variable "ssh_key_name" {
+  description = "AWS key pair name (set SSH_KEY_NAME in .env, e.g. my-keypair)"
+  type        = string
+  default     = ""
+}
+
 variable "repo_url" {
   description = "Git repository URL"
   type        = string
