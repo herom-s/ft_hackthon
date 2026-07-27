@@ -11,12 +11,12 @@ import (
 )
 
 var (
-	apiBaseURL      string
-	verbose         bool
-	insecure        bool
-	jsonOutput      bool
-	quiet           bool
-	nonInteractive  bool
+	apiBaseURL     string
+	verbose        bool
+	insecure       bool
+	jsonOutput     bool
+	quiet          bool
+	nonInteractive bool
 )
 
 var rootCmd = &cobra.Command{

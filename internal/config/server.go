@@ -3,14 +3,14 @@ package config
 import "os"
 
 type ServerConfig struct {
-	APIPort             string
-	DatabaseURL         string
-	TestSuitesPath      string
-	GiteaURL            string
-	GiteaPublicURL      string
-	GiteaOrg            string
-	GiteaAdminUser      string
-	GiteaAdminPassword  string
+	APIPort            string
+	DatabaseURL        string
+	TestSuitesPath     string
+	GiteaURL           string
+	GiteaPublicURL     string
+	GiteaOrg           string
+	GiteaAdminUser     string
+	GiteaAdminPassword string
 }
 
 func LoadServerConfig() *ServerConfig {

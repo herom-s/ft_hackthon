@@ -77,7 +77,7 @@ func (sm *SubmitManager) GenerateReport(opts ReportOptions) error {
 				stats.Failed++
 			}
 
-		stats.AvgScore += float64(ch.Points)
+			stats.AvgScore += float64(ch.Points)
 
 			if opts.ShowTrend {
 				dateKey := t.Format("2006-01-02")

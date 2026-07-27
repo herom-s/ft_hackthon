@@ -1,0 +1,8 @@
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - govet
+
+issues:
+  exclude-use-default: false

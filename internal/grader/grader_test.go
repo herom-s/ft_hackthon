@@ -815,12 +815,12 @@ func TestParseTestCounts(t *testing.T) {
 		{"partial pass", "10 tests, 7 passed, 3 failed", 10, 7},
 		{"extra newlines", "\n\n5 tests, 5 passed, 0 failed\n\n", 5, 5},
 		{"multiline output", "Compiling...\n5 tests, 5 passed, 0 failed\nDone", 5, 5},
-			{"no match", "something else entirely", 0, 0},
-			{"empty output", "", 0, 0},
-			{"single test pass", "1 tests, 1 passed, 0 failed", 1, 1},
-			{"single test fail", "1 tests, 0 passed, 1 failed", 1, 0},
-			{"M passed out of N format", "5 passed out of 10 tests", 10, 5},
-		}
+		{"no match", "something else entirely", 0, 0},
+		{"empty output", "", 0, 0},
+		{"single test pass", "1 tests, 1 passed, 0 failed", 1, 1},
+		{"single test fail", "1 tests, 0 passed, 1 failed", 1, 0},
+		{"M passed out of N format", "5 passed out of 10 tests", 10, 5},
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -37,31 +37,31 @@ var commands = []struct {
 	},
 	{
 		name: "batch", aliases: []string{"b"},
-		desc:   "Submit multiple projects or all commits",
+		desc:    "Submit multiple projects or all commits",
 		usage:   "batch <dir1> [dir2 ...] | batch --all-commits <dir>",
 		example: "  batch ../project1 ../project2\n  batch --all-commits .",
 	},
 	{
 		name: "status", aliases: []string{"st"},
-		desc:   "List your jobs or check a specific job status",
+		desc:    "List your jobs or check a specific job status",
 		usage:   "status [job_id]",
 		example: "  status\n  status abc123def456",
 	},
 	{
 		name: "submissions", aliases: []string{"subs"},
-		desc:   "Show submission history per challenge",
+		desc:    "Show submission history per challenge",
 		usage:   "submissions [challenge]",
 		example: "  submissions\n  submissions factorial",
 	},
 	{
 		name: "leaderboard", aliases: []string{"lb", "rank"},
-		desc:   "Show top scorers for a hackathon",
+		desc:    "Show top scorers for a hackathon",
 		usage:   "leaderboard <hackathon>",
 		example: "  leaderboard code-marathon",
 	},
 	{
 		name: "plagiarism", aliases: []string{"dup"},
-		desc:   "Check for duplicate submissions",
+		desc:    "Check for duplicate submissions",
 		usage:   "plagiarism <hackathon>",
 		example: "  plagiarism code-marathon",
 	},
@@ -72,19 +72,19 @@ var commands = []struct {
 	},
 	{
 		name: "report", aliases: []string{"analytics", "stats"},
-		desc:   "Show submission analytics and trends",
+		desc:    "Show submission analytics and trends",
 		usage:   "report [--days=30] [--trend] [challenge]",
 		example: "  report\n  report --days=7 --trend\n  report factorial",
 	},
 	{
 		name: "whoami", aliases: []string{"me"},
-		desc:   "Show current user",
+		desc:    "Show current user",
 		usage:   "whoami",
 		example: "  whoami",
 	},
 	{
 		name: "rating", aliases: []string{"elo"},
-		desc:   "Display your current Elo rating",
+		desc:    "Display your current Elo rating",
 		usage:   "rating",
 		example: "  rating",
 	},
@@ -95,19 +95,19 @@ var commands = []struct {
 	},
 	{
 		name: "version", aliases: []string{"v"},
-		desc:   "Display version info",
+		desc:    "Display version info",
 		usage:   "version",
 		example: "  version",
 	},
 	{
 		name: "help", aliases: []string{"h", "?"},
-		desc:   "Show this help",
+		desc:    "Show this help",
 		usage:   "help [command]",
 		example: "  help\n  help status",
 	},
 	{
 		name: "exit", aliases: []string{"quit", "q"},
-		desc:   "Exit the shell",
+		desc:    "Exit the shell",
 		usage:   "exit",
 		example: "  exit",
 	},
@@ -739,5 +739,3 @@ func handleReport(sm *client.SubmitManager, args []string) {
 		fmt.Printf("✗ Report failed: %v\n", err)
 	}
 }
-
-

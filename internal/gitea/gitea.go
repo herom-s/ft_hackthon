@@ -13,13 +13,13 @@ import (
 const tokenFilePath = "/token/admin-token.txt"
 
 type Client struct {
-	baseURL    string
-	publicURL  string
-	adminUser  string
-	adminPass  string
-	org        string
-	hc         *http.Client
-	readAdmin  func() string
+	baseURL   string
+	publicURL string
+	adminUser string
+	adminPass string
+	org       string
+	hc        *http.Client
+	readAdmin func() string
 }
 
 func NewClient() *Client {

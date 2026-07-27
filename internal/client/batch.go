@@ -119,9 +119,9 @@ func (sm *SubmitManager) SubmitAllCommits(projectDir string) []BatchResult {
 		cmd.Dir = projectDir
 		if _, err := cmd.CombinedOutput(); err != nil {
 			results = append(results, BatchResult{
-				Dir:   projectDir,
+				Dir:    projectDir,
 				Commit: sha,
-				Error: fmt.Sprintf("checkout %s: %v", sha, err),
+				Error:  fmt.Sprintf("checkout %s: %v", sha, err),
 			})
 			continue
 		}
@@ -137,9 +137,9 @@ func (sm *SubmitManager) SubmitAllCommits(projectDir string) []BatchResult {
 		resp, err := sm.apiClient.Submit(sha, suite)
 		if err != nil {
 			results = append(results, BatchResult{
-				Dir:   projectDir,
+				Dir:    projectDir,
 				Commit: sha,
-				Error: err.Error(),
+				Error:  err.Error(),
 			})
 			continue
 		}

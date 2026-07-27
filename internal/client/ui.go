@@ -8,7 +8,7 @@ import (
 
 type TerminalUI struct {
 	spinnerIdx int
-	spinner     []string
+	spinner    []string
 }
 
 func NewTerminalUI() *TerminalUI {

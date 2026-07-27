@@ -24,20 +24,24 @@ func hashPassword(t *testing.T, password string) string {
 }
 
 type mockGitea struct {
-	adminToken      string
-	createUserErr   error
-	addToOrgErr     error
-	repo            *gitea.CreateRepoResponse
-	tokenResp       *gitea.CreateTokenResponse
-	publicCloneURL  string
+	adminToken     string
+	createUserErr  error
+	addToOrgErr    error
+	repo           *gitea.CreateRepoResponse
+	tokenResp      *gitea.CreateTokenResponse
+	publicCloneURL string
 }
 
-func (m *mockGitea) AdminToken() string                                          { return m.adminToken }
-func (m *mockGitea) CreateGiteaUser(username, password string) error              { return m.createUserErr }
-func (m *mockGitea) AddUserToOrg(username string) error                           { return m.addToOrgErr }
-func (m *mockGitea) CreateUserRepo(username string) (*gitea.CreateRepoResponse, error) { return m.repo, nil }
-func (m *mockGitea) CreateUserToken(username, password string) (*gitea.CreateTokenResponse, error) { return m.tokenResp, nil }
-func (m *mockGitea) PublicCloneURL(username string) string                        { return m.publicCloneURL }
+func (m *mockGitea) AdminToken() string                              { return m.adminToken }
+func (m *mockGitea) CreateGiteaUser(username, password string) error { return m.createUserErr }
+func (m *mockGitea) AddUserToOrg(username string) error              { return m.addToOrgErr }
+func (m *mockGitea) CreateUserRepo(username string) (*gitea.CreateRepoResponse, error) {
+	return m.repo, nil
+}
+func (m *mockGitea) CreateUserToken(username, password string) (*gitea.CreateTokenResponse, error) {
+	return m.tokenResp, nil
+}
+func (m *mockGitea) PublicCloneURL(username string) string { return m.publicCloneURL }
 
 func setupTest(t *testing.T, opts ...*mockGitea) (*APIHandler, *database.InMemoryDB) {
 	t.Helper()
@@ -279,9 +283,9 @@ func TestRegisterHandler(t *testing.T) {
 
 func TestRegisterHandler_WithGitea(t *testing.T) {
 	mock := &mockGitea{
-		adminToken: "admin-token-123",
-		repo:       &gitea.CreateRepoResponse{CloneURL: "http://gitea/org/user.git", Name: "testuser"},
-		tokenResp:  &gitea.CreateTokenResponse{SHA1: "user-token-abc"},
+		adminToken:     "admin-token-123",
+		repo:           &gitea.CreateRepoResponse{CloneURL: "http://gitea/org/user.git", Name: "testuser"},
+		tokenResp:      &gitea.CreateTokenResponse{SHA1: "user-token-abc"},
 		publicCloneURL: "http://public/org/user.git",
 	}
 	h, db := setupTest(t, mock)
