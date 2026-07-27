@@ -13,6 +13,12 @@ locals {
       - cp .env.example .env
       - PUBLIC_IP=$(curl -s http://ifconfig.me)
       - sed -i "s|GITEA_PUBLIC_URL=.*|GITEA_PUBLIC_URL=http://$PUBLIC_IP:3222|" .env
+      - sed -i "s|^DOMAIN=.*|DOMAIN=|" .env
+      - |
+        if [ -n "${var.domain}" ]; then
+          sed -i "s|^DOMAIN=.*|DOMAIN=${var.domain}|" .env
+          sed -i "s|^GITEA_PUBLIC_URL=.*|GITEA_PUBLIC_URL=http://${var.domain}:3222|" .env
+        fi
       - docker compose up -d --build
   EOF
   )
@@ -30,9 +36,9 @@ resource "azurerm_network_security_group" "this" {
 }
 
 resource "azurerm_network_security_rule" "ports" {
-  for_each                    = toset(["22", "8342", "8343", "3222"])
+  for_each                    = toset(["22", "80", "8343", "3222"])
   name                        = "Allow-${each.value}"
-  priority                    = 100 + index(["22", "8342", "8343", "3222"], each.value)
+  priority                    = 100 + index(["22", "80", "8343", "3222"], each.value)
   direction                   = "Inbound"
   access                      = "Allow"
   protocol                    = "Tcp"
@@ -56,6 +62,11 @@ resource "azurerm_subnet" "this" {
   resource_group_name  = azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = ["10.0.1.0/24"]
+}
+
+resource "azurerm_subnet_network_security_group_association" "this" {
+  subnet_id                 = azurerm_subnet.this.id
+  network_security_group_id = azurerm_network_security_group.this.id
 }
 
 resource "azurerm_public_ip" "this" {
@@ -83,12 +94,12 @@ resource "azurerm_linux_virtual_machine" "this" {
   location              = azurerm_resource_group.this.location
   resource_group_name   = azurerm_resource_group.this.name
   size                  = var.size
-  admin_username        = "admin"
+  admin_username        = "ftuser"
   custom_data           = local.cloud_init
   network_interface_ids = [azurerm_network_interface.this.id]
   admin_ssh_key {
-    username   = "admin"
-    public_key = file("~/.ssh/id_rsa.pub")
+    username   = "ftuser"
+    public_key = var.ssh_public_key
   }
   os_disk {
     caching              = "ReadWrite"
@@ -107,7 +118,7 @@ output "ip" {
 }
 
 output "ssh_command" {
-  value = "ssh admin@${azurerm_public_ip.this.ip_address}"
+  value = "ssh ftuser@${azurerm_public_ip.this.ip_address}"
 }
 
 output "api_url" {

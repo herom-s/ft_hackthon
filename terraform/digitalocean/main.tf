@@ -13,6 +13,7 @@ locals {
       - cp .env.example .env
       - PUBLIC_IP=$(curl -s http://ifconfig.me)
       - sed -i "s|GITEA_PUBLIC_URL=.*|GITEA_PUBLIC_URL=http://$PUBLIC_IP:3222|" .env
+      - sed -i "s|^DOMAIN=.*|DOMAIN=|" .env
       - |
         if [ -n "${var.domain}" ]; then
           sed -i "s|^DOMAIN=.*|DOMAIN=${var.domain}|" .env

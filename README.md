@@ -46,6 +46,29 @@ ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
 
 See [docs/SYSTEM_OPERATIONS.md](docs/SYSTEM_OPERATIONS.md) for multi-cloud (AWS/GCP/Azure) via OpenTofu.
 
+### Azure Setup
+
+```bash
+# 1. Install Azure CLI
+brew install azure-cli        # macOS
+# or: sudo apt install azure-cli
+
+# 2. Login
+az login
+
+# 3. Set your subscription
+az account set --subscription "your-subscription-id"
+
+# 4. Add to .env
+echo 'CLOUD_PROVIDER=azure' >> .env
+echo 'SSH_PUBLIC_KEY_PATH=$HOME/.ssh/id_ed25519.pub' >> .env  # adjust to your key
+
+# 5. Deploy
+make deploy
+```
+
+Azure uses `ftuser` user (not `root`). SSH with `ssh ftuser@<vm-ip>`.
+
 ## Download the CLI
 
 Pre-built binaries on the [releases page](https://github.com/herom-s/ft_hackthon/releases):

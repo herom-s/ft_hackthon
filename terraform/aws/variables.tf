@@ -5,9 +5,9 @@ variable "region" {
 }
 
 variable "size" {
-  description = "EC2 instance type"
+  description = "EC2 instance type (t3.small = 2 vCPU burstable, 2 GB RAM)"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"
 }
 
 variable "repo_url" {

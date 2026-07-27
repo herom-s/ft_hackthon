@@ -1,217 +1,213 @@
-.PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker clean test fmt lint run-api run-cli deps docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary deploy deploy-info deploy-destroy
+.PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker \
+        clean test test-coverage fmt lint vet run-api run-cli run-worker deps \
+        docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary \
+        deploy deploy-info deploy-destroy dns setup info watch
 
-# Variables
-GOCMD=go
-GOBUILD=$(GOCMD) build
-GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
-GOGET=$(GOCMD) get
-GOMOD=$(GOCMD) mod
-BINARY_CLI=ft_hackthon
-BINARY_API=ft_hackthon-api
-BINARY_WORKER=ft_hackthon-worker
+# ── Go ──
+GOCMD     = go
+GOBUILD   = $(GOCMD) build
+GOCLEAN   = $(GOCMD) clean
+GOTEST    = $(GOCMD) test
+GOMOD     = $(GOCMD) mod
 
-# Build directories
-CLI_DIR=./cmd/ft_hackthon
-API_DIR=./cmd/api
-WORKER_DIR=./cmd/worker
+BINARY_CLI     = ft_hackthon
+BINARY_API     = ft_hackthon-api
+BINARY_WORKER  = ft_hackthon-worker
+CLI_DIR        = ./cmd/ft_hackthon
+API_DIR        = ./cmd/api
+WORKER_DIR     = ./cmd/worker
 
-# Colors for output
-BLUE := $(shell printf '\033[0;34m')
+# ── Colors ──
+BLUE  := $(shell printf '\033[0;34m')
 GREEN := $(shell printf '\033[0;32m')
 YELLOW := $(shell printf '\033[1;33m')
-NC := $(shell printf '\033[0m')
+NC    := $(shell printf '\033[0m')
 
-help: ## Display this help screen
+# ── Env ──
+# Usage: $(LOAD_ENV) at the start of any recipe that needs .env vars.
+# Must be followed by line continuations (backslash) to stay in the same shell.
+LOAD_ENV = set -a; . $(PWD)/.env 2>/dev/null || true; set +a
+
+# ── Help ──
+help:
 	@echo "$(BLUE)ft_hackthon - Hackathon Grading System$(NC)"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort \
+	  | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
 
-# Dependencies
-deps: ## Download dependencies
-	@echo "$(BLUE)Downloading dependencies...$(NC)"
+# ── Dependencies ──
+deps: ## Download Go dependencies
 	$(GOMOD) download
 	$(GOMOD) tidy
-	@echo "$(GREEN)✓ Dependencies downloaded$(NC)"
 
-# Building
+# ── Build ──
 build: build-cli build-api build-worker ## Build all components
 
-build-cli: ## Build CLI tool
-	@echo "$(BLUE)Building ft_hackthon...$(NC)"
+build-cli: ## Build CLI binary
 	$(GOBUILD) -o bin/$(BINARY_CLI) $(CLI_DIR)
-	@echo "$(GREEN)✓ CLI built: bin/$(BINARY_CLI)$(NC)"
 
-build-api: ## Build API server
-	@echo "$(BLUE)Building API server...$(NC)"
+build-api: ## Build API server binary
 	$(GOBUILD) -o bin/$(BINARY_API) $(API_DIR)
-	@echo "$(GREEN)✓ API server built: bin/$(BINARY_API)$(NC)"
 
-build-worker: ## Build worker engine
-	@echo "$(BLUE)Building worker engine...$(NC)"
+build-worker: ## Build worker binary
 	$(GOBUILD) -o bin/$(BINARY_WORKER) $(WORKER_DIR)
-	@echo "$(GREEN)✓ Worker built: bin/$(BINARY_WORKER)$(NC)"
 
-build-dev: ## Build with debug flags
-	@echo "$(BLUE)Building with debug flags...$(NC)"
+build-dev: ## Build CLI with debug flags
 	$(GOBUILD) -gcflags="all=-N -l" -o bin/$(BINARY_CLI)-dev $(CLI_DIR)
-	@echo "$(GREEN)✓ Dev CLI built: bin/$(BINARY_CLI)-dev$(NC)"
 
-# Installation
-install: install-cli install-api install-worker ## Install all components
-
-install-cli: build-cli ## Install CLI tool
-	@echo "$(BLUE)Installing ft_hackthon...$(NC)"
+# ── Install ──
+install: install-cli install-api install-worker ## Install all binaries to GOPATH/bin
+install-cli: build-cli
 	cp bin/$(BINARY_CLI) $(GOPATH)/bin/
-	@echo "$(GREEN)✓ ft_hackthon installed to $(GOPATH)/bin$(NC)"
-
-install-api: build-api ## Install API server
-	@echo "$(BLUE)Installing API server...$(NC)"
+install-api: build-api
 	cp bin/$(BINARY_API) $(GOPATH)/bin/
-	@echo "$(GREEN)✓ API server installed to $(GOPATH)/bin$(NC)"
-
-install-worker: build-worker ## Install worker engine
-	@echo "$(BLUE)Installing worker engine...$(NC)"
+install-worker: build-worker
 	cp bin/$(BINARY_WORKER) $(GOPATH)/bin/
-	@echo "$(GREEN)✓ Worker installed to $(GOPATH)/bin$(NC)"
 
-# Testing and Quality
-test: ## Run tests
-	@echo "$(BLUE)Running tests...$(NC)"
+# ── Test & Quality ──
+test: ## Run all tests
 	$(GOTEST) -v ./...
-	@echo "$(GREEN)✓ Tests completed$(NC)"
 
-test-coverage: ## Run tests with coverage
-	@echo "$(BLUE)Running tests with coverage...$(NC)"
+test-coverage: ## Run tests with coverage report
 	$(GOTEST) -v -coverprofile=coverage.out ./...
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
-	@echo "$(GREEN)✓ Coverage report: coverage.html$(NC)"
 
-fmt: ## Format code
-	@echo "$(BLUE)Formatting code...$(NC)"
+fmt: ## Format Go code
 	$(GOCMD) fmt ./...
-	@echo "$(GREEN)✓ Code formatted$(NC)"
-
-lint: ## Run linter
-	@echo "$(BLUE)Running linter...$(NC)"
-	@which golangci-lint > /dev/null || (echo "$(YELLOW)Installing golangci-lint...$(NC)" && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
-	golangci-lint run ./...
-	@echo "$(GREEN)✓ Linting completed$(NC)"
 
 vet: ## Run go vet
-	@echo "$(BLUE)Running go vet...$(NC)"
 	$(GOCMD) vet ./...
-	@echo "$(GREEN)✓ Vet completed$(NC)"
 
-# Running
-run-api: build-api ## Run API server locally (requires TESTSUITES_PATH)
-	@echo "$(BLUE)Starting API server...$(NC)"
+lint: ## Run golangci-lint
+	@which golangci-lint > /dev/null \
+	  || (echo "$(YELLOW)Installing golangci-lint...$(NC)" \
+	      && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+	golangci-lint run ./...
+
+# ── Run Locally ──
+run-api: build-api ## Start API server (requires TESTSUITES_PATH)
 	TESTSUITES_PATH="$${TESTSUITES_PATH:-$$PWD/testsuites}" ./bin/$(BINARY_API)
 
-run-worker: build-worker ## Run worker engine locally
-	@echo "$(BLUE)Starting worker engine...$(NC)"
+run-worker: build-worker ## Start worker engine
 	TESTSUITES_PATH="$${TESTSUITES_PATH:-$$PWD/testsuites}" ./bin/$(BINARY_WORKER)
 
-run-cli: build-cli ## Run CLI (use with ARGS=..., adds --insecure by default)
-	@echo "$(BLUE)Running ft_hackthon...$(NC)"
+run-cli: build-cli ## Run CLI (--insecure added by default; override with ARGS=...)
 	./bin/$(BINARY_CLI) --insecure $(ARGS)
 
-# Docker
+# ── Docker ──
 docker-build: ## Build all Docker images
-	@echo "$(BLUE)Building Docker images...$(NC)"
 	docker compose build
-	@echo "$(GREEN)✓ Docker images built$(NC)"
 
-docker-up: ## Start Docker services (default: detached). Usage: make docker-up or make docker-up ARGS=
-	@echo "$(BLUE)Starting Docker services...$(NC)"
+docker-up: ## Start services (detached). make docker-up ARGS= for foreground
 	docker compose up -d $(ARGS)
-	@echo "$(GREEN)✓ Docker services started$(NC)"
 
-docker-down: ## Stop and remove Docker containers
-	@echo "$(BLUE)Stopping Docker services...$(NC)"
+docker-down: ## Stop and remove containers
 	docker compose down
-	@echo "$(GREEN)✓ Docker services stopped$(NC)"
 
-docker-restart: docker-down docker-up ## Restart all Docker services
+docker-restart: docker-down docker-up ## Restart all services
 
-docker-logs: ## View Docker logs (tail with -f: make docker-logs ARGS=-f)
-	@echo "$(BLUE)Docker logs:$(NC)"
+docker-logs: ## Tail logs. make docker-logs ARGS=-f for follow
 	docker compose logs $(ARGS)
 
-docker-ps: ## List running Docker containers
-	@echo "$(BLUE)Running containers:$(NC)"
+docker-ps: ## List running containers
 	docker compose ps
 
-docker-clean: ## Remove all Docker resources (containers, volumes, images)
-	@echo "$(BLUE)Removing all Docker resources...$(NC)"
+docker-clean: ## Remove containers, volumes, images
 	docker compose down --volumes --remove-orphans
-	@echo "$(GREEN)✓ Docker resources removed$(NC)"
 
-docker-cli-binary: ## Extract standalone CLI binary (outputs to ./bin/ft_hackthon)
-	@echo "$(BLUE)Extracting standalone CLI binary...$(NC)"
+docker-cli-binary: ## Extract standalone CLI binary to ./bin/ft_hackthon-cli
 	docker build --output=bin/ --target=cli-binary .
 	@mv bin/ft_hackthon bin/ft_hackthon-cli 2>/dev/null || true
-	@echo "$(GREEN)✓ CLI binary extracted to bin/ft_hackthon-cli$(NC)"
 
-# Cleanup
-clean: ## Clean build artifacts and workspace
-	@echo "$(BLUE)Cleaning...$(NC)"
+# ── Clean ──
+clean: ## Remove build artifacts
 	$(GOCLEAN)
-	rm -rf bin/
-	rm -f coverage.out coverage.html
-	@echo "$(YELLOW)Cleaning ft_hackthon data...$(NC)"
-	rm -rf ~/ft_hackthon/
-	rm -rf ~/.ft_hackthon/
-	@echo "$(GREEN)✓ Clean completed$(NC)"
+	rm -rf bin/ coverage.out coverage.html
 
-# Development
-watch: ## Watch for changes and rebuild
-	@echo "$(BLUE)Watching for changes...$(NC)"
-	@which entr > /dev/null || (echo "$(YELLOW)Installing entr...$(NC)" && go install github.com/cortesi/entr/cmd/entr@latest)
+# ── Development ──
+watch: ## Rebuild CLI on Go file changes
+	@which entr > /dev/null \
+	  || (echo "$(YELLOW)Installing entr...$(NC)" \
+	      && go install github.com/cortesi/entr/cmd/entr@latest)
 	find . -name "*.go" | entr -r make build-cli
 
-# Deployment (multi-cloud via OpenTofu)
-deploy: ## Deploy to cloud. Set CLOUD_PROVIDER=digitalocean|aws|gcp|azure in .env
-	@echo "$(BLUE)Deploying via OpenTofu...$(NC)"
-	@if ! command -v tofu >/dev/null 2>&1; then \
-		echo "$(YELLOW)OpenTofu not found. Installing...$(NC)" && \
-		(brew install opentofu 2>/dev/null || sudo snap install opentofu --classic 2>/dev/null || \
-		echo "Install: https://opentofu.org/docs/cli/install/" && exit 1); fi
-	@set -a; . $(PWD)/.env 2>/dev/null || true; set +a; \
-		PROVIDER="$${CLOUD_PROVIDER:-digitalocean}"; \
-		if [ ! -d "terraform/$$PROVIDER" ]; then echo "Unknown provider: $$PROVIDER (choose: digitalocean, aws, gcp, azure)" && exit 1; fi; \
-		echo "Provider: $$PROVIDER"; \
-		cd terraform/$$PROVIDER && tofu init && tofu apply -var="domain=$${DOMAIN:-}" -var="ssh_key_name=$${SSH_KEY_NAME:-}"
-	@echo "$(GREEN)✓ Deployed. Run 'make deploy-info' for VM IP.$(NC)"
-
-deploy-info: ## Show deployed VM info
-	@set -a; . $(PWD)/.env 2>/dev/null || true; set +a; \
-		cd terraform/$${CLOUD_PROVIDER:-digitalocean} && tofu output
-
-deploy-destroy: ## Destroy the VM
-	@set -a; . $(PWD)/.env 2>/dev/null || true; set +a; \
-		cd terraform/$${CLOUD_PROVIDER:-digitalocean} && tofu destroy
-	@echo "$(GREEN)✓ VM destroyed$(NC)"
-
-# Documentation
-docs: ## Generate documentation
-	@echo "$(BLUE)Generating documentation...$(NC)"
-	$(GOCMD) doc ./...
-
-# Setup
-setup: ## Setup development environment
-	@echo "$(BLUE)Setting up development environment...$(NC)"
+setup: ## Initialize development environment
 	mkdir -p bin
 	$(GOMOD) download
 	$(GOMOD) tidy
-	@echo "$(GREEN)✓ Setup completed$(NC)"
 
-# Info
-info: ## Display build and environment info
-	@echo "$(BLUE)Build Information$(NC)"
-	@echo "Go Version: $$($(GOCMD) version)"
-	@echo "OS: $$($(GOCMD) env GOOS)"
-	@echo "Arch: $$($(GOCMD) env GOARCH)"
+info: ## Show Go version and project structure
+	@echo "$(BLUE)Go Version:$(NC) $$($(GOCMD) version)"
+	@echo "$(BLUE)OS / Arch:$(NC) $$($(GOCMD) env GOOS)/$$($(GOCMD) env GOARCH)"
 	@echo ""
-	@echo "$(BLUE)Project Structure$(NC)"
+	@echo "$(BLUE)Project Structure:$(NC)"
 	@find . -type f -name "*.go" | grep -E "(cmd|internal)" | sort
+
+# ── Terraform helpers ──
+# Exports used by deploy, deploy-destroy, and dns.
+# Usage: inline with a recipe using line continuations.
+define TOFU_ENV
+	$(LOAD_ENV) && \
+	PROVIDER="$${CLOUD_PROVIDER:-digitalocean}" && \
+	export TF_VAR_domain="$${DOMAIN:-}" && \
+	export TF_VAR_ssh_key_name="$${SSH_KEY_NAME:-}" && \
+	export TF_VAR_ssh_public_key="$$(cat "$${SSH_PUBLIC_KEY_PATH:-$$HOME/.ssh/id_rsa.pub}" 2>/dev/null)" && \
+	true
+endef
+
+# ── Deploy ──
+deploy: ## Deploy to CLOUD_PROVIDER (digitalocean|aws|gcp|azure). Reads .env
+	@$(TOFU_ENV); \
+		echo "$(BLUE)Deploying $$PROVIDER...$(NC)"; \
+		if ! command -v tofu >/dev/null 2>&1; then \
+			echo "Install OpenTofu: https://opentofu.org/docs/cli/install/" >&2; \
+			exit 1; \
+		fi; \
+		if [ ! -d "terraform/$$PROVIDER" ]; then \
+			echo "Unknown provider: $$PROVIDER (choose: digitalocean, aws, gcp, azure)" >&2; \
+			exit 1; \
+		fi; \
+		if [ "$$PROVIDER" = "azure" ] && [ -z "$$TF_VAR_ssh_public_key" ]; then \
+			echo "$(YELLOW)Azure requires SSH_PUBLIC_KEY_PATH in .env$(NC)" >&2; \
+			exit 1; \
+		fi; \
+		cd terraform/$$PROVIDER && tofu init && tofu apply -auto-approve; \
+		EXIT=$$?; \
+		if [ "$$PROVIDER" = "azure" ] && [ $$EXIT -ne 0 ]; then \
+			echo "$(YELLOW)Azure eventual consistency — retrying...$(NC)"; \
+			sleep 10; \
+			for i in 1 2 3; do \
+				tofu apply -auto-approve && EXIT=0 && break; \
+				EXIT=$$?; \
+				[ $$i -lt 3 ] && sleep 15; \
+			done; \
+		fi; \
+		exit $$EXIT
+	@echo "$(GREEN)✓ Deployed — run 'make deploy-info' for connection details$(NC)"
+
+deploy-info: ## Show outputs from the deployed stack
+	@$(LOAD_ENV) && \
+		cd terraform/$${CLOUD_PROVIDER:-digitalocean} && tofu output
+
+deploy-destroy: ## Tear down the deployed stack
+	@echo "$(YELLOW)Destroying deployment...$(NC)"
+	@$(TOFU_ENV) && \
+		cd terraform/$$PROVIDER && tofu destroy
+	@echo "$(GREEN)✓ Destroyed$(NC)"
+
+dns: ## Point name.com A records at the VM. Requires NAMECOM_USERNAME + NAMECOM_TOKEN in .env
+	@$(LOAD_ENV) && \
+		if [ -z "$$NAMECOM_USERNAME" ] || [ -z "$$NAMECOM_TOKEN" ]; then \
+			echo "Set NAMECOM_USERNAME and NAMECOM_TOKEN in .env" >&2; \
+			exit 1; \
+		fi && \
+		if [ -z "$$DOMAIN" ]; then \
+			echo "Set DOMAIN in .env" >&2; \
+			exit 1; \
+		fi && \
+		VM_IP="$${VM_IP:-$$(cd terraform/$${CLOUD_PROVIDER:-digitalocean} 2>/dev/null && tofu output -raw ip 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$$')}" && \
+		if [ -z "$$VM_IP" ]; then \
+			echo "Set VM_IP=... in .env or deploy first" >&2; \
+			exit 1; \
+		fi && \
+		scripts/dns-namecom.sh "$$NAMECOM_USERNAME" "$$NAMECOM_TOKEN" "$$DOMAIN" "$$VM_IP"

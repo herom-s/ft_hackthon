@@ -11,9 +11,9 @@ variable "zone" {
 }
 
 variable "size" {
-  description = "Machine type"
+  description = "Machine type (e2-small = 2 vCPU shared, 2 GB RAM)"
   type        = string
-  default     = "e2-medium"
+  default     = "e2-small"
 }
 
 variable "repo_url" {
