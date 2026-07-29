@@ -14,60 +14,59 @@ make docker-cli-binary                 # Extract CLI from Docker image
 
 ## Deploy to a Cloud VM
 
+Set `CLOUD_PROVIDER` and provider credentials in `.env`, then:
+
 ```bash
-echo 'DIGITALOCEAN_TOKEN=your_token' >> .env
-
-# 2. Optionally set a domain for Let's Encrypt
-echo 'DOMAIN=hackthon.yourdomain.com' >> .env
-
-# 3. Deploy (creates a $12/mo droplet in nyc3)
 make deploy
-
-# 4. Use the CLI (--insecure only needed if no domain)
-ft_hackthon --insecure --api-url https://<vm-ip>:8343/api/v1 login
+make dns                          # (optional) update DNS to VM IP
 ```
 
-### With a domain (no --insecure needed)
+Traefik auto-provisions a Let's Encrypt cert when `DOMAIN` is set.
 
-```bash
-echo 'DOMAIN=hackthon.yourdomain.com' >> .env
-make deploy-destroy && make deploy
+### DigitalOcean
+
+```env
+CLOUD_PROVIDER=digitalocean
+DIGITALOCEAN_TOKEN=your_api_token
+SSH_KEY_NAME=your_key_name        # must exist in DO account
+DOMAIN=                           # (optional) enables Let's Encrypt
 ```
 
-Traefik auto-provisions a Let's Encrypt certificate.
+SSH: `ssh root@<ip>`
 
-**Important**: After first deploy with `DOMAIN` set, you must change your domain's nameservers at the registrar to DigitalOcean's (`ns1.digitalocean.com`, `ns2.digitalocean.com`, `ns3.digitalocean.com`). The A record is managed automatically by terraform.
+### AWS
 
-Then:
-
-```bash
-ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
+```env
+CLOUD_PROVIDER=aws
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+SSH_KEY_NAME=42School              # EC2 key pair name (created via aws ec2 create-key-pair)
+DOMAIN=                            # (optional) enables Let's Encrypt
 ```
 
-See [docs/SYSTEM_OPERATIONS.md](docs/SYSTEM_OPERATIONS.md) for multi-cloud (AWS/GCP/Azure) via OpenTofu.
+Credentials via `~/.aws/credentials` or env vars. SSH: `ssh -i ~/.ssh/42School.pem ubuntu@<ip>`
 
-### Azure Setup
+### GCP
 
-```bash
-# 1. Install Azure CLI
-brew install azure-cli        # macOS
-# or: sudo apt install azure-cli
-
-# 2. Login
-az login
-
-# 3. Set your subscription
-az account set --subscription "your-subscription-id"
-
-# 4. Add to .env
-echo 'CLOUD_PROVIDER=azure' >> .env
-echo 'SSH_PUBLIC_KEY_PATH=$HOME/.ssh/id_ed25519.pub' >> .env  # adjust to your key
-
-# 5. Deploy
-make deploy
+```env
+CLOUD_PROVIDER=gcp
+TF_VAR_project=my-project-id       # GCP project ID
+SSH_KEY_NAME=your-username         # GCP username (from SSH key comment)
+SSH_PUBLIC_KEY_PATH=~/.ssh/id_ed25519.pub
+DOMAIN=                            # (optional) enables Let's Encrypt
 ```
 
-Azure uses `ftuser` user (not `root`). SSH with `ssh ftuser@<vm-ip>`.
+GCP auth: `gcloud auth application-default login`. SSH: `ssh <username>@<ip>`
+
+### Azure
+
+```env
+CLOUD_PROVIDER=azure
+SSH_PUBLIC_KEY_PATH=~/.ssh/id_ed25519.pub
+DOMAIN=                            # (optional) enables Let's Encrypt
+```
+
+Azure auth: `az login`. SSH: `ssh ftuser@<ip>`
 
 ## Download the CLI
 

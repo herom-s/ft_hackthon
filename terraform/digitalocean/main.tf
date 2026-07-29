@@ -28,6 +28,43 @@ data "digitalocean_ssh_key" "user" {
   name  = var.ssh_key_name
 }
 
+resource "digitalocean_firewall" "this" {
+  name = "ft-hackthon"
+
+  droplet_ids = [digitalocean_droplet.this.id]
+
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "22"
+    source_addresses = ["0.0.0.0/0"]
+  }
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "80"
+    source_addresses = ["0.0.0.0/0"]
+  }
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "8343"
+    source_addresses = ["0.0.0.0/0"]
+  }
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "3222"
+    source_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "tcp"
+    port_range            = "1-65535"
+    destination_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "udp"
+    port_range            = "1-65535"
+    destination_addresses = ["0.0.0.0/0"]
+  }
+}
+
 resource "digitalocean_droplet" "this" {
   image      = "ubuntu-24-04-x64"
   name       = "ft-hackthon"
