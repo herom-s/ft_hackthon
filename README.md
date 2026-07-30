@@ -1,8 +1,27 @@
 # ft_hackthon
 
-> Automated grading system for hackathon projects
+A self-hosted grading platform for hackathons. Students push code, the platform builds and tests it against predefined suites, and returns results through a CLI.
 
-Students submit code via a CLI client and receive real-time grading results. Built for 42School-style hackathons with multi-cloud deployment.
+## How it works
+
+```
+┌──────────┐   submit    ┌──────┐  poll   ┌──────────┐
+│  CLI      │──────────▶ │ API  │◀───────│  Worker   │
+│ (student) │  status◀───│      │  jobs  │ (grader) │
+└──────────┘  WebSocket  └──┬───┘        └──────────┘
+                            │
+                     ┌──────┴──────┐
+                     │  PostgreSQL  │
+                     │  + Gitea    │
+                     └─────────────┘
+```
+
+- **CLI** — interactive shell for login, submission, status, leaderboard
+- **API** — REST + WebSocket server (auth, grading, user management)
+- **Worker** — polls the API for grading jobs, runs test suites, records results
+- **Traefik** — reverse proxy with automatic Let's Encrypt TLS
+- **Gitea** — hosts student repositories, auto-created per registration
+- **Test suites** — YAML-defined build/run steps with multi-challenge support
 
 ## Installing / Getting started
 
@@ -13,15 +32,15 @@ make docker-cli-binary
 ./bin/ft_hackthon-cli --insecure
 ```
 
-This starts all services (API, worker, database, Gitea) in Docker and extracts the CLI binary. Run the binary to enter the interactive shell.
+Starts all services (API, worker, database, Gitea) in Docker and extracts the CLI binary.
 
 ### Initial Configuration
-
-Copy `.env.example` to `.env` and adjust settings. The defaults work for local development:
 
 ```shell
 cp .env.example .env
 ```
+
+Defaults work for local development. Full reference in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#configuration).
 
 ## Usage
 
@@ -33,70 +52,40 @@ ft_hackthon --insecure
 > status
 ```
 
-Commands run inside the interactive REPL. For CI/CD automation, use `--non-interactive`:
-
-```shell
-ft_hackthon --non-interactive --insecure grademe
-```
+For CI/CD: `ft_hackthon --non-interactive --insecure grademe`
 
 ## Features
 
-- Interactive CLI with tab completion
+- Interactive REPL with tab completion
 - Real-time WebSocket grading updates
-- Leaderboard, analytics, and plagiarism detection
+- Leaderboard, analytics, plagiarism detection
 - Parallel grading via auto-scaling worker pool
-- Automatic TLS with Let's Encrypt via Traefik
-- Deploy to DigitalOcean, AWS, GCP, or Azure
+- Automatic TLS with Let's Encrypt
+- Deploy to DigitalOcean, AWS, GCP, Azure
 
 ## Developing
 
 ```shell
-git clone <repo>
 make build          # Build all Go binaries
 make test           # Run tests
 make fmt lint       # Format and lint
 ```
 
-### Building
-
-```shell
-make build-cli      # CLI only
-make build-api      # API server only
-make build-worker   # Worker only
-```
-
 ### Deploying
 
-Set `CLOUD_PROVIDER` and credentials in `.env`, then:
-
 ```shell
-make deploy
-make dns            # Update DNS to VM IP (optional)
+make deploy         # Provisions VM + starts services
+make dns            # Updates DNS to VM IP (optional)
 ```
-
-Traefik provisions a Let's Encrypt certificate when `DOMAIN` is set.
-
-## Configuration
-
-Full env reference in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md#configuration).
-
-Key variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DOMAIN` | `""` | Enables Let's Encrypt HTTPS |
-| `CLOUD_PROVIDER` | `digitalocean` | Cloud target for `make deploy` |
-| `TRAEFIK_HTTPS_PORT` | `8343` | Host HTTPS port |
 
 ## Links
 
-- [User Guide](docs/USER_GUIDE.md)
-- [Development Guide](docs/DEVELOPMENT.md)
-- [System Operations](docs/SYSTEM_OPERATIONS.md)
-- [API Reference](docs/API.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- Repository: [github.com/herom-s/ft_hackthon](https://github.com/herom-s/ft_hackthon)
+- [User Guide](docs/USER_GUIDE.md) — installation, commands, workflows
+- [Development Guide](docs/DEVELOPMENT.md) — build, test, deploy, CI/CD, env reference
+- [System Operations](docs/SYSTEM_OPERATIONS.md) — production management
+- [API Reference](docs/API.md) — REST and WebSocket endpoints
+- [Architecture](docs/ARCHITECTURE.md) — system design
 
 ## Licensing
 
-The code in this project is licensed under MIT license. See `LICENSE` file for details.
+MIT. See `LICENSE` file for details.
