@@ -31,7 +31,8 @@ go build -o ft_hackthon ./cmd/ft_hackthon
 If you don't have an account yet:
 
 ```bash
-ft_hackthon register
+ft_hackthon
+> register
 ```
 
 You'll be prompted for:
@@ -46,7 +47,8 @@ This creates a `ft_hackthon.yml` file in your workspace that tells the grader wh
 ### 2. Login
 
 ```bash
-ft_hackthon login
+ft_hackthon
+> login
 ```
 
 If you haven't selected a hackathon yet, you'll be prompted to choose one.
@@ -56,7 +58,8 @@ Your login token will be securely stored in `~/.ft_hackthon/config.json`.
 ### 3. Verify Login
 
 ```bash
-ft_hackthon whoami
+ft_hackthon
+> whoami
 ```
 
 Output: `Logged in as: your_username`
@@ -86,7 +89,8 @@ git commit -m "Describe your changes"
 ### Step 3: Submit for Grading
 
 ```bash
-ft_hackthon grademe
+ft_hackthon
+> grademe
 ```
 
 ### Step 4: Wait for Results
@@ -121,13 +125,15 @@ STATUS: Completed!
 Check all your submissions:
 
 ```bash
-ft_hackthon status
+ft_hackthon
+> status
 ```
 
 If you want to check the status of a specific submission:
 
 ```bash
-ft_hackthon status job-uuid-1234
+ft_hackthon
+> status job-uuid-1234
 ```
 
 Replace `job-uuid-1234` with your actual job ID from the submission.
@@ -138,75 +144,94 @@ Replace `job-uuid-1234` with your actual job ID from the submission.
 
 ```bash
 # Login to ft_hackthon
-ft_hackthon login
+ft_hackthon
+> login
 
 # Create a new account
-ft_hackthon register
+ft_hackthon
+> register
 
 # Show current user
-ft_hackthon whoami
+ft_hackthon
+> whoami
 
 # Logout (clears token)
-ft_hackthon logout
+ft_hackthon
+> logout
 ```
 
 ### Grading Commands
 
 ```bash
 # Submit current project for grading
-ft_hackthon grademe
+ft_hackthon
+> grademe
 
 # List all grading jobs or check a specific job
-ft_hackthon status
-ft_hackthon status <job_id>
+ft_hackthon
+> status
+ft_hackthon
+> status <job_id>
 
 # View top scorers for a hackathon
-ft_hackthon leaderboard <hackathon_name>
+ft_hackthon
+> leaderboard <hackathon_name>
 
 # View submission history per challenge
-ft_hackthon submissions <challenge>
+ft_hackthon
+> submissions <challenge>
 
 # View code submitted for a specific job
-ft_hackthon diff <job_id>
+ft_hackthon
+> diff <job_id>
 
 # Check for duplicate submissions
-ft_hackthon plagiarism <hackathon>
+ft_hackthon
+> plagiarism <hackathon>
 ```
 
 ### Batch Submission
 
 ```bash
 # Submit multiple project directories
-ft_hackthon batch ../project1 ../project2 ../project3
+ft_hackthon
+> batch ../project1 ../project2 ../project3
 
 # Submit all commits in a project
-ft_hackthon batch --all-commits .
+ft_hackthon
+> batch --all-commits .
 ```
 
 ### Analytics and Reports
 
 ```bash
 # Show submission stats for the last 30 days
-ft_hackthon report
+ft_hackthon
+> report
 
 # Show stats for a specific challenge
-ft_hackthon report factorial
+ft_hackthon
+> report factorial
 
 # Show stats with trend chart for last 7 days
-ft_hackthon report --days=7 --trend
+ft_hackthon
+> report --days=7 --trend
 ```
 
 ### System Commands
 
 ```bash
 # Display help
-ft_hackthon help
+ft_hackthon
+> help
 
 # Display version
-ft_hackthon version
+ft_hackthon
+> version
 
 # Show current Elo rating
-ft_hackthon rating
+ft_hackthon
+> rating
 
 # Show available commands
 ft_hackthon --help
@@ -243,12 +268,16 @@ ft_hackthon --non-interactive rating
 ft_hackthon --non-interactive logout
 
 # JSON output (for programmatic consumption)
-ft_hackthon --json status
-ft_hackthon --json leaderboard libft-tester
-ft_hackthon --json submissions
+ft_hackthon --json
+> status
+ft_hackthon --json
+> leaderboard libft-tester
+ft_hackthon --json
+> submissions
 
 # Quiet mode (suppress non-essential output)
-ft_hackthon --quiet grademe
+ft_hackthon --quiet
+> grademe
 
 # Combined for CI
 ft_hackthon --non-interactive --json --insecure status
@@ -259,8 +288,10 @@ ft_hackthon --non-interactive --json --insecure status
 If you're using a custom ft_hackthon server:
 
 ```bash
-ft_hackthon --api-url https://grader.example.com/api/v1 login
-ft_hackthon --api-url https://grader.example.com/api/v1 grademe
+ft_hackthon --api-url https://grader.example.com/api/v1
+> login
+ft_hackthon --api-url https://grader.example.com/api/v1
+> grademe
 ```
 
 ## Workspace
@@ -315,7 +346,8 @@ The suite name must match a directory under `testsuites/` on the server.
 View top scorers for a hackathon:
 
 ```bash
-ft_hackthon leaderboard libft-tester
+ft_hackthon
+> leaderboard libft-tester
 ```
 
 Output:
@@ -354,7 +386,8 @@ Specific information about what was tested and any failures will be displayed in
 ### "Not authenticated: please login first"
 
 ```bash
-ft_hackthon login
+ft_hackthon
+> login
 # Then try your command again
 ```
 
@@ -414,7 +447,8 @@ git add my-parser.go
 git commit -m "Improved parser"
 
 # Submit again
-ft_hackthon grademe
+ft_hackthon
+> grademe
 ```
 
 ### 3. Viewing Previous Results
@@ -422,20 +456,24 @@ ft_hackthon grademe
 View all your past submissions:
 
 ```bash
-ft_hackthon status
-ft_hackthon submissions
+ft_hackthon
+> status
+ft_hackthon
+> submissions
 ```
 
 View code from a specific submission:
 
 ```bash
-ft_hackthon diff <job_id>
+ft_hackthon
+> diff <job_id>
 ```
 
 Check for duplicate submissions:
 
 ```bash
-ft_hackthon plagiarism <hackathon_name>
+ft_hackthon
+> plagiarism <hackathon_name>
 ```
 
 ### 4. Submission Analytics
@@ -444,10 +482,12 @@ Track your performance over time:
 
 ```bash
 # Overall stats
-ft_hackthon report
+ft_hackthon
+> report
 
 # Per-challenge breakdown with trends
-ft_hackthon report --trend --days=7
+ft_hackthon
+> report --trend --days=7
 ```
 
 ### 5. Batch Processing
@@ -455,10 +495,12 @@ ft_hackthon report --trend --days=7
 Submit multiple projects at once:
 
 ```bash
-ft_hackthon batch ~/projects/project-a ~/projects/project-b
+ft_hackthon
+> batch ~/projects/project-a ~/projects/project-b
 
 # Or submit every commit in your history
-ft_hackthon batch --all-commits .
+ft_hackthon
+> batch --all-commits .
 ```
 
 ### 7. Scripting
@@ -492,7 +534,8 @@ This file contains:
 ### Clearing Configuration
 
 ```bash
-ft_hackthon logout
+ft_hackthon
+> logout
 ```
 
 Or manually remove the file:
@@ -544,8 +587,10 @@ Grading time depends on:
 If you see authentication errors:
 
 ```bash
-ft_hackthon logout
-ft_hackthon login
+ft_hackthon
+> logout
+ft_hackthon
+> login
 ```
 
 ### Issue: Slow Submissions
@@ -582,11 +627,13 @@ ls -la ft_hackthon
 
 ```bash
 # Single command
-ft_hackthon --api-url http://custom-server:8000/api/v1 grademe
+ft_hackthon --api-url http://custom-server:8000/api/v1
+> grademe
 
 # Or set environment variable
 export FT_HACKTHON_API_URL="http://custom-server:8000/api/v1"
-ft_hackthon grademe
+ft_hackthon
+> grademe
 ```
 
 ### Verbose Output
@@ -594,7 +641,8 @@ ft_hackthon grademe
 For debugging:
 
 ```bash
-ft_hackthon --verbose grademe
+ft_hackthon --verbose
+> grademe
 ```
 
 ### Batch Processing
@@ -604,7 +652,8 @@ Submit multiple commits:
 ```bash
 #!/bin/bash
 dirs=(~/projects/*/)
-ft_hackthon batch "${dirs[@]}"
+ft_hackthon
+> batch "${dirs[@]}"
 ```
 
 ## Getting Help
@@ -612,18 +661,25 @@ ft_hackthon batch "${dirs[@]}"
 ### Built-in Help
 
 ```bash
-ft_hackthon help
-ft_hackthon help login
-ft_hackthon help grademe
-ft_hackthon help batch
-ft_hackthon help report
-ft_hackthon help report
+ft_hackthon
+> help
+ft_hackthon
+> help login
+ft_hackthon
+> help grademe
+ft_hackthon
+> help batch
+ft_hackthon
+> help report
+ft_hackthon
+> help report
 ```
 
 ### Version Information
 
 ```bash
-ft_hackthon version
+ft_hackthon
+> version
 ```
 
 ### Reporting Issues
@@ -644,7 +700,7 @@ A: Usually 30 seconds to 5 minutes, depending on queue and project complexity.
 A: Yes! You can submit as many times as you want. Only your final submission is graded.
 
 **Q: What if I make a mistake in my submission?**
-A: Just make the correction, commit, and submit again with `ft_hackthon grademe`.
+A: Just make the correction, commit, and submit again. Inside the REPL, run `grademe`.
 
 **Q: Where is my token stored?**
 A: In `~/.ft_hackthon/config.json` with restricted permissions (readable only by you).
@@ -662,6 +718,6 @@ A: Download the latest version and reinstall, or rebuild from source.
 A: Yes! Use `--non-interactive` and `--json` flags for pipeline integration.
 
 **Q: How do I submit multiple projects at once?**
-A: Use `ft_hackthon batch <dir1> <dir2> ...` to submit multiple directories.
+A: Inside the REPL, use `batch <dir1> <dir2> ...` to submit multiple directories.
 
 

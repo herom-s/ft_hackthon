@@ -209,7 +209,8 @@ Display Success Message
 ### Grading Submission Flow
 
 ```
-User: ft_hackthon grademe
+User: ft_hackthon
+> grademe
     |
 Load Token from Config
     |
@@ -249,7 +250,8 @@ The monitoring mechanism has the following characteristics:
 ### Batch Submission Flow
 
 ```
-User: ft_hackthon batch <dir1> <dir2> ...
+User: ft_hackthon
+> batch <dir1> <dir2> ...
     |
 For each directory:
   | Verify it's a git repo
@@ -346,34 +348,43 @@ The CLI implements comprehensive error handling:
 make build-cli
 
 # Test login
-./bin/ft_hackthon login
+./bin/ft_hackthon
+> login
 # Enter credentials
 
 # Verify authentication
-./bin/ft_hackthon whoami
+./bin/ft_hackthon
+> whoami
 
 # Test grading submission
 cd ~/my-project  # Must be a git repo
-../ft_hackthon/bin/ft_hackthon grademe
+../ft_hackthon/bin/ft_hackthon
+> grademe
 
 # Check job status
-./bin/ft_hackthon status job-id-here
+./bin/ft_hackthon
+> status job-id-here
 
 # Test batch submission
-./bin/ft_hackthon batch ../project1 ../project2
+./bin/ft_hackthon
+> batch ../project1 ../project2
 
 # Test analytics
-./bin/ft_hackthon report --trend
+./bin/ft_hackthon
+> report --trend
 
 # Logout
-./bin/ft_hackthon logout
+./bin/ft_hackthon
+> logout
 ```
 
 ### Custom API Endpoint
 
 ```bash
-ft_hackthon --api-url http://custom-server:8000/api/v1 login
-ft_hackthon --api-url http://custom-server:8000/api/v1 grademe
+ft_hackthon --api-url http://custom-server:8000/api/v1
+> login
+ft_hackthon --api-url http://custom-server:8000/api/v1
+> grademe
 ```
 
 ### CI/CD Pipeline

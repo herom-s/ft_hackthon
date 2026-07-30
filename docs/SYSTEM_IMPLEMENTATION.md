@@ -492,20 +492,25 @@ go run cmd/worker/main.go
 
 ### Submit Project (CLI)
 ```bash
-ft_hackthon login
+ft_hackthon
+> login
 cd ~/my-project
-ft_hackthon grademe
+ft_hackthon
+> grademe
 ```
 
 ### Batch Submission
 ```bash
-ft_hackthon batch ../project1 ../project2
-ft_hackthon batch --all-commits .
+ft_hackthon
+> batch ../project1 ../project2
+ft_hackthon
+> batch --all-commits .
 ```
 
 ### Submission Analytics
 ```bash
-ft_hackthon report --trend --days=30
+ft_hackthon
+> report --trend --days=30
 ```
 
 ### Monitor System

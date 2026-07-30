@@ -273,7 +273,8 @@ err := wsc.ListenStatus(jobID, func(s *StatusResponse) {
 ### Enable Verbose Logging
 
 ```bash
-ft_hackthon --verbose login
+ft_hackthon --verbose
+> login
 ```
 
 ### Print Debug Information

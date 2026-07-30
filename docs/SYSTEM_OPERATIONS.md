@@ -65,9 +65,12 @@ make docker-cli-binary
 ```bash
 cd <repo-dir>
 make docker-up
-./bin/ft_hackthon-cli --insecure register
-./bin/ft_hackthon-cli --insecure login
-cd ~/my-project && ./bin/ft_hackthon-cli --insecure grademe
+./bin/ft_hackthon-cli --insecure
+> register
+./bin/ft_hackthon-cli --insecure
+> login
+cd ~/my-project && ./bin/ft_hackthon-cli --insecure
+> grademe
 ```
 
 ### With a domain (no --insecure)
@@ -77,7 +80,8 @@ auto-provisions a Let's Encrypt certificate.
 
 ```bash
 make deploy
-ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
+ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1
+> login
 ```
 
 ---
@@ -90,13 +94,15 @@ ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1 login
 
 **User Command:**
 ```bash
-$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1 register
+$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1
+> register
 Username: alice
 Password: ************
 Confirm: ************
 + Account created. You can now log in.
 
-$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1 login
+$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1
+> login
 Username: alice
 Password: ************
 + Successfully logged in as alice
@@ -141,7 +147,8 @@ nothing to commit, working tree clean
 
 **User Command:**
 ```bash
-$ ft_hackthon --insecure grademe
+$ ft_hackthon --insecure
+> grademe
 Pushing workspace code to Gitea...
 Pushed commit: a1b2c3d4e5f6a7b8c9d0
 + Job ID: job-abc123def456
@@ -510,8 +517,10 @@ make docker-up
 
 # Run CLI commands
 make docker-cli-binary   # Extract CLI binary from Docker image
-./bin/ft_hackthon-cli --insecure register
-./bin/ft_hackthon-cli --insecure grademe
+./bin/ft_hackthon-cli --insecure
+> register
+./bin/ft_hackthon-cli --insecure
+> grademe
 
 # View logs
 make docker-logs
@@ -541,20 +550,24 @@ make run-cli ARGS="grademe"
 
 ```bash
 # Submit multiple projects
-./bin/ft_hackthon batch /path/to/project1 /path/to/project2
+./bin/ft_hackthon
+> batch /path/to/project1 /path/to/project2
 
 # Submit all commits of a project
-./bin/ft_hackthon batch --all-commits .
+./bin/ft_hackthon
+> batch --all-commits .
 ```
 
 ### Method 3: Submission Analytics
 
 ```bash
 # Show stats for last 30 days
-./bin/ft_hackthon report
+./bin/ft_hackthon
+> report
 
 # Show stats with trend for last 7 days
-./bin/ft_hackthon report --days=7 --trend
+./bin/ft_hackthon
+> report --days=7 --trend
 ```
 
 ### Method 4: WebSocket Testing
