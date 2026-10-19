@@ -73,6 +73,12 @@ var migrations = []migration{
 		CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);
 		CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
 	},
+	{
+		ID:          7,
+		Description: "strip embedded Gitea credentials from stored job clone URLs",
+		SQL: `UPDATE jobs SET gitea_clone_url = regexp_replace(gitea_clone_url, '://[^/@]+@', '://')
+		WHERE gitea_clone_url LIKE '%@%'`,
+	},
 }
 
 const schemaMigrationsTable = "schema_migrations"

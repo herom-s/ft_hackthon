@@ -15,6 +15,25 @@ func setupTestDir(t *testing.T) string {
 	return tmpDir
 }
 
+func TestClearTokenKeepsServerSettings(t *testing.T) {
+	setupTestDir(t)
+	SaveConfig(&Config{Token: "tok", User: "alice", GiteaToken: "g", APIURL: "https://h/api/v1", Insecure: true})
+
+	if err := ClearToken(); err != nil {
+		t.Fatalf("ClearToken: %v", err)
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Token != "" || cfg.User != "" || cfg.GiteaToken != "" {
+		t.Errorf("expected session cleared, got %+v", cfg)
+	}
+	if cfg.APIURL != "https://h/api/v1" || !cfg.Insecure {
+		t.Errorf("expected server settings kept, got %+v", cfg)
+	}
+}
+
 func TestGetConfigPath(t *testing.T) {
 	home := setupTestDir(t)
 	path, err := GetConfigPath()
@@ -193,8 +212,8 @@ func TestLoadServerConfig_defaults(t *testing.T) {
 	if cfg.GiteaPublicURL != "http://localhost:3000" {
 		t.Errorf("expected http://localhost:3000, got %s", cfg.GiteaPublicURL)
 	}
-	if cfg.GiteaOrg != "moulinerie" {
-		t.Errorf("expected moulinerie, got %s", cfg.GiteaOrg)
+	if cfg.GiteaOrg != "ft_hackthon" {
+		t.Errorf("expected ft_hackthon, got %s", cfg.GiteaOrg)
 	}
 	if cfg.GiteaAdminUser != "ft_hackthon" {
 		t.Errorf("expected ft_hackthon, got %s", cfg.GiteaAdminUser)

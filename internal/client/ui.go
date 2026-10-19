@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -25,56 +26,108 @@ func (ui *TerminalUI) PrintStatusUpdate(status *StatusResponse) {
 	}
 }
 
+const maxDetailLines = 8
+
+var failureLine = regexp.MustCompile(`(?i)fail|✗|error|timed out|expected|assert|panic|segmentation|abort`)
+
+// PrintGradeResult prints a one-line verdict, one row per challenge, and for
+// failures only the lines that explain them (everything when Verbose is set).
 func (ui *TerminalUI) PrintGradeResult(result *GradeResult) {
-	width := 50
-
-	fmt.Println(strings.Repeat("=", width))
-	fmt.Println(ui.centerText("GRADING RESULTS", width))
-	fmt.Println(strings.Repeat("=", width))
-	fmt.Println()
-
-	parserStatus := "✓ YES"
-	if !result.ParserSuccess {
-		parserStatus = "✗ NO"
+	passed := 0
+	for _, ch := range result.Challenges {
+		if ch.Passed {
+			passed++
+		}
 	}
-	ui.printTableRow("Parser Success", parserStatus, width)
+	total := len(result.Challenges)
 
-	benchmarkStr := fmt.Sprintf("%d ms", result.BenchmarkMs)
-	ui.printTableRow("Benchmark Speed", benchmarkStr, width)
-
-	scoreStr := fmt.Sprintf("%d points", result.FinalScore)
-	ui.printTableRow("Final Score", scoreStr, width)
-
-	fmt.Println()
-	fmt.Println(strings.Repeat("=", width))
-
-	if result.Details != "" {
-		fmt.Println("\nDetails:")
-		fmt.Printf("  %s\n", result.Details)
+	ok := result.ParserSuccess
+	verdict := "tests failed"
+	if ok {
+		verdict = "tests passed"
+	}
+	if total > 0 {
+		ok = passed == total
+		verdict = fmt.Sprintf("%d/%d challenges passed", passed, total)
+	}
+	parts := []string{verdict, Bold(fmt.Sprintf("%d pts", result.FinalScore))}
+	if result.BenchmarkMs > 0 {
+		parts = append(parts, fmt.Sprintf("%d ms", result.BenchmarkMs))
 	}
 
-	if len(result.Challenges) > 0 {
+	fmt.Println()
+	fmt.Printf("%s %s\n", statusMark(ok), strings.Join(parts, Dim(" · ")))
+
+	filtered := false
+	if total > 0 {
 		fmt.Println()
-		ui.PrintHeader("Challenge Results")
+		width := 0
 		for _, ch := range result.Challenges {
-			status := "✓"
-			if !ch.Passed {
-				status = "✗"
+			width = max(width, len(ch.Title))
+		}
+		for _, ch := range result.Challenges {
+			earned := 0
+			if ch.Passed {
+				earned = ch.Points
 			}
-			scoreStr := fmt.Sprintf("%d/%d pts", ch.Points, ch.Points)
-			if !ch.Passed {
-				scoreStr = fmt.Sprintf("0/%d pts", ch.Points)
-			}
-			fmt.Printf(" %s %-20s %-12s %d/%d tests\n", status, ch.Title, scoreStr, ch.TestsPassed, ch.TestsRun)
-			if ch.Details != "" {
-				fmt.Printf("   %s\n", ch.Details)
+			pts := fmt.Sprintf("%d/%d pts", earned, ch.Points)
+			fmt.Printf("  %s %-*s  %-12s %s\n", statusMark(ch.Passed), width, ch.Title, pts,
+				Dim(fmt.Sprintf("%d/%d tests", ch.TestsPassed, ch.TestsRun)))
+			if !ch.Passed || Verbose {
+				filtered = printDetails(ch.Details, !ch.Passed) || filtered
 			}
 		}
-		fmt.Println()
+	} else if !result.ParserSuccess || Verbose {
+		filtered = printDetails(result.Details, !result.ParserSuccess)
 	}
 
 	fmt.Println()
-	fmt.Println("✓ Grading completed successfully!")
+	if filtered {
+		hint := "Showing failing lines only. Type 'status <job_id> --verbose' for the full output."
+		if !Interactive {
+			hint = "Showing failing lines only. Run 'ft_hackthon --verbose status <job_id>' for the full output."
+		}
+		fmt.Println(Dim(hint))
+	}
+}
+
+// printDetails indents test output under a challenge. For failures it keeps
+// only the lines that explain the failure, capped at maxDetailLines, and
+// reports whether anything was left out.
+func printDetails(details string, failing bool) bool {
+	var lines []string
+	for _, l := range strings.Split(details, "\n") {
+		if strings.TrimSpace(l) != "" {
+			lines = append(lines, strings.TrimRight(l, " \r"))
+		}
+	}
+	shown := lines
+	if failing && !Verbose {
+		var picked []string
+		for _, l := range lines {
+			if failureLine.MatchString(l) {
+				picked = append(picked, l)
+			}
+		}
+		if len(picked) > 0 {
+			shown = picked
+		}
+		if len(shown) > maxDetailLines {
+			shown = shown[:maxDetailLines]
+		}
+	}
+	for _, l := range shown {
+		if failing {
+			fmt.Printf("      %s\n", Red(l))
+		} else {
+			fmt.Printf("      %s\n", Dim(l))
+		}
+	}
+	if hidden := len(lines) - len(shown); hidden > 0 {
+		fmt.Printf("      %s\n", Dim(fmt.Sprintf("… %d more lines", hidden)))
+		return true
+	}
+	return false
 }
 
 func (ui *TerminalUI) printTableRow(label, value string, width int) {

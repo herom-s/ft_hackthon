@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"encoding/base64"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,8 @@ import (
 )
 
 func setupLibftSuite(t *testing.T) (string, func()) {
+	// The fixture suite has no Dockerfile, so it runs on the host.
+	t.Setenv("GRADER_ALLOW_UNSANDBOXED", "true")
 	rootDir := t.TempDir()
 	suiteDir := filepath.Join(rootDir, "libft")
 	os.MkdirAll(suiteDir, 0755)
@@ -344,6 +347,41 @@ func TestGradeProject_MissingFile(t *testing.T) {
 	}
 	if result.FinalScore != 0 {
 		t.Errorf("expected score 0 for failing test, got %d", result.FinalScore)
+	}
+}
+
+func TestGitAuthEnv(t *testing.T) {
+	db := database.NewInMemoryDB()
+	db.CreateUser(&database.User{ID: "u1", Username: "alice", GiteaToken: "tok123"})
+	db.CreateUser(&database.User{ID: "u2", Username: "bob"})
+	w := NewWorker(db)
+
+	wantHeader := "GIT_CONFIG_VALUE_0=Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte("tok123:"))
+	hasHeader := func(env []string) bool {
+		for _, e := range env {
+			if e == wantHeader {
+				return true
+			}
+		}
+		return false
+	}
+	hasGitConfig := func(env []string) bool {
+		for _, e := range env {
+			if strings.HasPrefix(e, "GIT_CONFIG_KEY_0=") {
+				return true
+			}
+		}
+		return false
+	}
+
+	if env := w.gitAuthEnv("u1"); !hasHeader(env) {
+		t.Error("expected auth header for user with Gitea token")
+	}
+	if env := w.gitAuthEnv("u2"); hasGitConfig(env) {
+		t.Error("expected no auth header for user without Gitea token")
+	}
+	if env := w.gitAuthEnv("missing"); hasGitConfig(env) {
+		t.Error("expected no auth header for unknown user")
 	}
 }
 

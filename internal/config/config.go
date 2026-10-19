@@ -19,9 +19,12 @@ type Config struct {
 	RepoPath      string `json:"repo_path,omitempty"`
 	GiteaCloneURL string `json:"gitea_clone_url,omitempty"`
 	GiteaToken    string `json:"gitea_token,omitempty"`
+	APIURL        string `json:"api_url,omitempty"`
+	Insecure      bool   `json:"insecure,omitempty"`
 }
 
-// ConfigDir returns the config directory path (panics on error, safe for runtime)
+// ConfigDir returns the config directory path, falling back to a directory
+// under os.TempDir() when the home directory cannot be determined.
 func ConfigDir() string {
 	p, err := GetConfigPath()
 	if err != nil {
@@ -121,10 +124,14 @@ func GetToken() (string, error) {
 	return cfg.Token, nil
 }
 
-// ClearToken removes the stored token
+// ClearToken removes the stored session but keeps the server settings, so
+// logging back in does not require --api-url / --insecure again.
 func ClearToken() error {
-	cfg := &Config{}
-	return SaveConfig(cfg)
+	cfg, err := LoadConfig()
+	if err != nil {
+		cfg = &Config{}
+	}
+	return SaveConfig(&Config{APIURL: cfg.APIURL, Insecure: cfg.Insecure})
 }
 
 // SaveRepoPath stores the repository path in config

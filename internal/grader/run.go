@@ -57,7 +57,17 @@ func Grade(workspaceDir string, suiteName string) *Result {
 	return result
 }
 
+// allowUnsandboxedEnv opts in to running suites that have no Dockerfile
+// directly on the grading host. Only for local development: it executes
+// untrusted student code with the worker's privileges.
+const allowUnsandboxedEnv = "GRADER_ALLOW_UNSANDBOXED"
+
 func gradeSuite(suite *Suite, workspaceDir string) *Result {
+	if _, err := os.Stat(filepath.Join(suite.Dir, "Dockerfile")); err != nil && os.Getenv(allowUnsandboxedEnv) != "true" {
+		return &Result{
+			Details: fmt.Sprintf("Suite %q has no Dockerfile; refusing to run student code unsandboxed (set %s=true for local development)", suite.Name, allowUnsandboxedEnv),
+		}
+	}
 	challengesDir := filepath.Join(suite.Dir, "challenges")
 	if _, err := os.Stat(challengesDir); err == nil {
 		return GradeChallenges(suite, workspaceDir)

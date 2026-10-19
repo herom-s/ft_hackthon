@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ft_hackthon/internal/client"
 	"github.com/ft_hackthon/internal/config"
@@ -25,14 +26,47 @@ var rootCmd = &cobra.Command{
 	Long: `ft_hackthon is a terminal CLI tool for submitting and grading
 hackathon projects using the ft_hackthon automated grading system.
 
-Run without arguments to start the interactive shell.`,
-	Version: "1.0.0",
+Students: run without arguments to start the interactive shell.
+
+CI: pass a command to run it once, without prompts:
+  ft_hackthon [--json] [--insecure] [--api-url URL] <command> [args...]
+Global flags go before the command. In CI, login and register read
+credentials from FT_HACKTHON_USERNAME and FT_HACKTHON_PASSWORD.`,
+	Version:       "1.0.0",
+	Args:          cobra.ArbitraryArgs,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		applySavedSettings(cmd)
+		if jsonOutput {
+			client.SetColor(false)
+		}
+		client.Verbose = verbose
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return runCI(cmd, args)
+		}
 		if nonInteractive {
-			return runNonInteractive(args)
+			return fmt.Errorf("CI mode needs a command, e.g. ft_hackthon --json grademe")
 		}
 		return runREPL()
 	},
+}
+
+// applySavedSettings reuses the server address and TLS choice from the last
+// successful login unless the flags were given explicitly.
+func applySavedSettings(cmd *cobra.Command) {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return
+	}
+	if !cmd.Flag("api-url").Changed && cfg.APIURL != "" {
+		apiBaseURL = cfg.APIURL
+	}
+	if !cmd.Flag("insecure").Changed && cfg.Insecure {
+		insecure = true
+	}
 }
 
 func newAPIClient() *client.APIClient {
@@ -43,9 +77,13 @@ func newAPIClient() *client.APIClient {
 	return c
 }
 
-func runNonInteractive(args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("usage: ft_hackthon [--non-interactive] <command> [args...]")
+func runCI(cmd *cobra.Command, args []string) error {
+	client.Interactive = false
+	for _, a := range args[1:] {
+		name := strings.SplitN(strings.TrimLeft(a, "-"), "=", 2)[0]
+		if strings.HasPrefix(a, "--") && cmd.Flag(name) != nil {
+			return fmt.Errorf("global flag %s must come before the command: ft_hackthon %s %s", a, a, args[0])
+		}
 	}
 
 	apiClient := newAPIClient()
@@ -66,6 +104,8 @@ func runNonInteractive(args []string) error {
 				result["error"] = err.Error()
 			}
 			json.NewEncoder(os.Stdout).Encode(result)
+		} else if err != nil && !client.AlreadyReported(err) {
+			printCIError(err)
 		}
 		if err != nil {
 			os.Exit(1)
@@ -109,18 +149,18 @@ func runNonInteractive(args []string) error {
 		if jobID == "" {
 			jobs, err := apiClient.ListJobs()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				printCIError(err)
 				os.Exit(1)
 			}
 			if jsonOutput {
 				json.NewEncoder(os.Stdout).Encode(jobs)
 				return nil
 			}
-			handleStatus(apiClient, ui, nil)
+			handleStatus(apiClient, submitManager, ui, nil)
 		} else {
 			statusResp, err := apiClient.GetStatus(jobID)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				printCIError(err)
 				os.Exit(1)
 			}
 			if jsonOutput {
@@ -140,7 +180,7 @@ func runNonInteractive(args []string) error {
 		if jsonOutput {
 			jobs, err := apiClient.ListJobs()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				printCIError(err)
 				os.Exit(1)
 			}
 			json.NewEncoder(os.Stdout).Encode(jobs)
@@ -164,7 +204,7 @@ func runNonInteractive(args []string) error {
 		}
 		lb, err := apiClient.GetLeaderboard(args[1])
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			printCIError(err)
 			os.Exit(1)
 		}
 		if jsonOutput {
@@ -180,7 +220,7 @@ func runNonInteractive(args []string) error {
 		if jsonOutput {
 			groups, err := apiClient.CheckPlagiarism(args[1])
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				printCIError(err)
 				os.Exit(1)
 			}
 			json.NewEncoder(os.Stdout).Encode(groups)
@@ -203,7 +243,7 @@ func runNonInteractive(args []string) error {
 			}
 		}
 		if err := submitManager.GenerateReport(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			printCIError(err)
 			os.Exit(1)
 		}
 
@@ -213,7 +253,7 @@ func runNonInteractive(args []string) error {
 		}
 		info, err := apiClient.GetUserInfo()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			printCIError(err)
 			os.Exit(1)
 		}
 		if jsonOutput {
@@ -228,7 +268,7 @@ func runNonInteractive(args []string) error {
 		}
 		info, err := apiClient.GetUserInfo()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			printCIError(err)
 			os.Exit(1)
 		}
 		if jsonOutput {
@@ -240,7 +280,7 @@ func runNonInteractive(args []string) error {
 	case "logout":
 		am := client.NewAuthManager(apiClient)
 		if err := am.Logout(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			printCIError(err)
 			os.Exit(1)
 		}
 
@@ -279,21 +319,28 @@ func runNonInteractive(args []string) error {
 		}
 
 	default:
-		return fmt.Errorf("unknown command: %s", args[0])
+		return fmt.Errorf("unknown command %q (run 'ft_hackthon --help' for CI usage)", args[0])
 	}
 
 	return nil
 }
 
+func printCIError(err error) {
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if h := client.Hint(err); h != "" {
+		fmt.Fprintln(os.Stderr, "  "+h)
+	}
+}
+
 func main() {
 	if err := config.EnsureConfigDir(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		printCIError(err)
 		os.Exit(1)
 	}
 
 	if err := rootCmd.Execute(); err != nil {
 		if !quiet {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			printCIError(err)
 		}
 		os.Exit(1)
 	}
@@ -306,4 +353,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format (for CI/CD)")
 	rootCmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "Suppress non-essential output")
 	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "Run in non-interactive mode (for CI/CD)")
+	rootCmd.PersistentFlags().MarkDeprecated("non-interactive", "passing a command already runs it in CI mode")
+	// Stop flag parsing at the command name so command-specific flags such as
+	// `batch --all-commits` or `report --trend` reach the command untouched.
+	rootCmd.Flags().SetInterspersed(false)
 }

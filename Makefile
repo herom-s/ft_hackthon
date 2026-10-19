@@ -1,7 +1,8 @@
 .PHONY: help build build-cli build-api build-worker install install-cli install-api install-worker \
         clean test test-coverage fmt lint vet run-api run-cli run-worker deps \
         docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary \
-        deploy deploy-info deploy-destroy dns setup info watch
+        deploy deploy-info deploy-destroy dns setup info watch \
+        floci-up floci-down test-deploy test-deploy-aws test-deploy-azure test-deploy-gcp
 
 # ── Go ──
 GOCMD     = go
@@ -148,7 +149,7 @@ info: ## Show Go version and project structure
 # Usage: inline with a recipe using line continuations.
 define TOFU_ENV
 	$(LOAD_ENV) && \
-	PROVIDER="$${CLOUD_PROVIDER:-digitalocean}" && \
+	PROVIDER="$${CLOUD_PROVIDER:-aws}" && \
 	export TF_VAR_domain="$${DOMAIN:-}" && \
 	export TF_VAR_ssh_key_name="$${SSH_KEY_NAME:-}" && \
 	export TF_VAR_ssh_public_key="$$(cat "$${SSH_PUBLIC_KEY_PATH:-$$HOME/.ssh/id_rsa.pub}" 2>/dev/null)" && \
@@ -156,7 +157,7 @@ define TOFU_ENV
 endef
 
 # ── Deploy ──
-deploy: ## Deploy to CLOUD_PROVIDER (digitalocean|aws|gcp|azure). Reads .env
+deploy: ## Deploy to CLOUD_PROVIDER (aws|gcp|azure). Reads .env
 	@$(TOFU_ENV); \
 		echo "$(BLUE)Deploying $$PROVIDER...$(NC)"; \
 		if ! command -v tofu >/dev/null 2>&1; then \
@@ -164,7 +165,7 @@ deploy: ## Deploy to CLOUD_PROVIDER (digitalocean|aws|gcp|azure). Reads .env
 			exit 1; \
 		fi; \
 		if [ ! -d "terraform/$$PROVIDER" ]; then \
-			echo "Unknown provider: $$PROVIDER (choose: digitalocean, aws, gcp, azure)" >&2; \
+			echo "Unknown provider: $$PROVIDER (choose: aws, gcp, azure)" >&2; \
 			exit 1; \
 		fi; \
 		if [ "$$PROVIDER" = "azure" ] && [ -z "$$TF_VAR_ssh_public_key" ]; then \
@@ -185,9 +186,36 @@ deploy: ## Deploy to CLOUD_PROVIDER (digitalocean|aws|gcp|azure). Reads .env
 		exit $$EXIT
 	@echo "$(GREEN)✓ Deployed — run 'make deploy-info' for connection details$(NC)"
 
+# ── Deploy integration tests (local cloud emulators, no cloud account) ──
+FLOCI_COMPOSE = docker compose -f terraform/test/docker-compose.yml
+
+floci-up: ## Start the floci AWS, Azure and GCP emulators used by test-deploy
+	@$(FLOCI_COMPOSE) up -d --wait
+
+floci-down: ## Stop the floci emulators
+	@$(FLOCI_COMPOSE) down --volumes --remove-orphans
+
+test-deploy: floci-up ## Deploy and destroy every cloud module against the floci emulators
+	@TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" \
+		$(GOTEST) -count=1 -tags integration -timeout 30m -v ./terraform/test/
+
+test-deploy-aws: ## Deploy test for the AWS module only (floci)
+	@$(MAKE) --no-print-directory _deploy-test SERVICE=floci TEST=TestDeployAWS
+
+test-deploy-azure: ## Deploy test for the Azure module only (floci-az)
+	@$(MAKE) --no-print-directory _deploy-test SERVICE=floci-az TEST=TestDeployAzure
+
+test-deploy-gcp: ## Deploy test for the GCP module only (floci-gcp)
+	@$(MAKE) --no-print-directory _deploy-test SERVICE=floci-gcp TEST=TestDeployGCP
+
+_deploy-test:
+	@$(FLOCI_COMPOSE) up -d --wait $(SERVICE)
+	@TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" \
+		$(GOTEST) -count=1 -tags integration -timeout 20m -v -run '^$(TEST)$$' ./terraform/test/
+
 deploy-info: ## Show outputs from the deployed stack
 	@$(LOAD_ENV) && \
-		cd terraform/$${CLOUD_PROVIDER:-digitalocean} && tofu output
+		cd terraform/$${CLOUD_PROVIDER:-aws} && tofu output
 
 deploy-destroy: ## Tear down the deployed stack
 	@echo "$(YELLOW)Destroying deployment...$(NC)"
@@ -205,7 +233,7 @@ dns: ## Point name.com A records at the VM. Requires NAMECOM_USERNAME + NAMECOM_
 			echo "Set DOMAIN in .env" >&2; \
 			exit 1; \
 		fi && \
-		VM_IP="$${VM_IP:-$$(cd terraform/$${CLOUD_PROVIDER:-digitalocean} 2>/dev/null && tofu output -raw ip 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$$')}" && \
+		VM_IP="$${VM_IP:-$$(cd terraform/$${CLOUD_PROVIDER:-aws} 2>/dev/null && tofu output -raw ip 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$$')}" && \
 		if [ -z "$$VM_IP" ]; then \
 			echo "Set VM_IP=... in .env or deploy first" >&2; \
 			exit 1; \

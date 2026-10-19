@@ -1,0 +1,34 @@
+name: Deploy Test AWS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/aws/**'
+      - 'terraform/test/aws/**'
+      - 'terraform/test/deploy_test.go'
+      - 'terraform/test/docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+      - '.github/workflows/deploy-test-aws.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/aws/**'
+      - 'terraform/test/aws/**'
+      - 'terraform/test/deploy_test.go'
+      - 'terraform/test/docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+      - '.github/workflows/deploy-test-aws.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  aws:
+    name: AWS
+    uses: ./.github/workflows/deploy-test.yml
+    with:
+      cloud: aws

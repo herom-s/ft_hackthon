@@ -24,9 +24,10 @@ var pollingInterval = 2 // seconds
 
 // APIClient wraps the HTTP client for API communication
 type APIClient struct {
-	client  *resty.Client
-	baseURL string
-	token   string
+	client   *resty.Client
+	baseURL  string
+	token    string
+	insecure bool
 }
 
 // NewAPIClient creates a new API client
@@ -54,6 +55,7 @@ func NewAPIClient(baseURL string) *APIClient {
 
 // SetInsecureSkipVerify configures the client to skip TLS verification
 func (ac *APIClient) SetInsecureSkipVerify() {
+	ac.insecure = true
 	ac.client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 }
 

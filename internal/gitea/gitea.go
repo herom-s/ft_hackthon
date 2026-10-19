@@ -33,7 +33,7 @@ func NewClient() *Client {
 	}
 	org := os.Getenv("GITEA_ORG")
 	if org == "" {
-		org = "moulinerie"
+		org = "ft_hackthon"
 	}
 	adminUser := os.Getenv("GITEA_ADMIN_USER")
 	if adminUser == "" {

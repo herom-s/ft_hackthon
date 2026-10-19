@@ -1,0 +1,29 @@
+# Local cloud emulators for the deploy integration tests (see terraform/README.md).
+# Host ports default to 145xx so they never collide with a floci started elsewhere on 45xx.
+name: ft-hackthon-floci
+
+services:
+  floci:
+    image: floci/floci:2.3.0
+    ports:
+      - "${FLOCI_AWS_PORT:-14566}:4566"
+    volumes:
+      # EC2 instances run as real Docker containers.
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Keep security groups as metadata: the module opens 80/8443/3222, which
+      # must not be published on the machine running the tests.
+      FLOCI_SERVICES_EC2_PUBLISH_SECURITY_GROUP_PORTS: "false"
+
+  floci-az:
+    image: floci/floci-az:0.15.0
+    ports:
+      - "${FLOCI_AZ_PORT:-14577}:4577"
+    environment:
+      # azurerm discovers the cloud over HTTPS (GET /metadata/endpoints).
+      FLOCI_AZ_TLS_ENABLED: "true"
+
+  floci-gcp:
+    image: floci/floci-gcp:0.11.0
+    ports:
+      - "${FLOCI_GCP_PORT:-14588}:4588"
