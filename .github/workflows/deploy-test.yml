@@ -1,28 +1,22 @@
-name: Deploy Integration Tests
+name: Deploy Test (reusable)
 
+# Called by deploy-test-aws.yml, deploy-test-azure.yml and deploy-test-gcp.yml.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'terraform/**'
-      - 'Makefile'
-      - '.github/workflows/deploy-test.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'terraform/**'
-      - 'Makefile'
-      - '.github/workflows/deploy-test.yml'
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      cloud:
+        description: aws, azure or gcp
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   deploy-test:
-    name: Deploy against floci emulators
+    name: Deploy ${{ inputs.cloud }} against floci
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-plugin-cache
     steps:
@@ -45,10 +39,21 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tofu-providers-${{ hashFiles('terraform/*/.terraform.lock.hcl') }}
+          key: tofu-providers-${{ inputs.cloud }}-${{ hashFiles(format('terraform/{0}/.terraform.lock.hcl', inputs.cloud)) }}
 
-      - name: Deploy every cloud module against floci, floci-az and floci-gcp
-        run: make test-deploy
+      # floci's EC2 pulls its guest image from ECR Public when an instance
+      # launches, and shared runners hit ECR Public's anonymous rate limit.
+      # Docker Hub serves the same image; floci skips the pull when it is
+      # already present under the ECR name.
+      - name: Pre-pull EC2 guest images
+        if: inputs.cloud == 'aws'
+        run: |
+          docker pull ubuntu:24.04
+          docker tag ubuntu:24.04 public.ecr.aws/docker/library/ubuntu:24.04
+          docker pull alpine:3.21
+
+      - name: Deploy, verify and destroy
+        run: make test-deploy-${{ inputs.cloud }}
 
       - name: Emulator logs on failure
         if: failure()

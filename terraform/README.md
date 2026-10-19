@@ -46,6 +46,11 @@ Each directory is self-contained with its own `main.tf`, `providers.tf`, and `va
 firewall ports and cloud-init, then destroys the stack and checks it is gone. Needs Docker,
 OpenTofu and Go. `make floci-down` stops the emulators.
 
+One cloud at a time: `make test-deploy-aws`, `make test-deploy-azure`, `make test-deploy-gcp`
+(each starts only its own emulator). In CI each cloud has its own workflow
+(`deploy-test-aws.yml`, `-azure.yml`, `-gcp.yml`, sharing `deploy-test.yml`) that runs only
+when that module, its test files, or the shared harness change.
+
 ```
 terraform/test/
 ├── docker-compose.yml   # pinned emulators on ports 14566 (AWS), 14577 (Azure), 14588 (GCP)

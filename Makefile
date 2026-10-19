@@ -2,7 +2,7 @@
         clean test test-coverage fmt lint vet run-api run-cli run-worker deps \
         docker-build docker-up docker-down docker-restart docker-logs docker-ps docker-clean docker-cli-binary \
         deploy deploy-info deploy-destroy dns setup info watch \
-        floci-up floci-down test-deploy
+        floci-up floci-down test-deploy test-deploy-aws test-deploy-azure test-deploy-gcp
 
 # ── Go ──
 GOCMD     = go
@@ -198,6 +198,20 @@ floci-down: ## Stop the floci emulators
 test-deploy: floci-up ## Deploy and destroy every cloud module against the floci emulators
 	@TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" \
 		$(GOTEST) -count=1 -tags integration -timeout 30m -v ./terraform/test/
+
+test-deploy-aws: ## Deploy test for the AWS module only (floci)
+	@$(MAKE) --no-print-directory _deploy-test SERVICE=floci TEST=TestDeployAWS
+
+test-deploy-azure: ## Deploy test for the Azure module only (floci-az)
+	@$(MAKE) --no-print-directory _deploy-test SERVICE=floci-az TEST=TestDeployAzure
+
+test-deploy-gcp: ## Deploy test for the GCP module only (floci-gcp)
+	@$(MAKE) --no-print-directory _deploy-test SERVICE=floci-gcp TEST=TestDeployGCP
+
+_deploy-test:
+	@$(FLOCI_COMPOSE) up -d --wait $(SERVICE)
+	@TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" \
+		$(GOTEST) -count=1 -tags integration -timeout 20m -v -run '^$(TEST)$$' ./terraform/test/
 
 deploy-info: ## Show outputs from the deployed stack
 	@$(LOAD_ENV) && \

@@ -1,0 +1,34 @@
+name: Deploy Test Azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/azure/**'
+      - 'terraform/test/azure/**'
+      - 'terraform/test/deploy_test.go'
+      - 'terraform/test/docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+      - '.github/workflows/deploy-test-azure.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/azure/**'
+      - 'terraform/test/azure/**'
+      - 'terraform/test/deploy_test.go'
+      - 'terraform/test/docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+      - '.github/workflows/deploy-test-azure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  azure:
+    name: Azure
+    uses: ./.github/workflows/deploy-test.yml
+    with:
+      cloud: azure

@@ -1,0 +1,34 @@
+name: Deploy Test GCP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/gcp/**'
+      - 'terraform/test/gcp/**'
+      - 'terraform/test/deploy_test.go'
+      - 'terraform/test/docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+      - '.github/workflows/deploy-test-gcp.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/gcp/**'
+      - 'terraform/test/gcp/**'
+      - 'terraform/test/deploy_test.go'
+      - 'terraform/test/docker-compose.yml'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+      - '.github/workflows/deploy-test-gcp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gcp:
+    name: GCP
+    uses: ./.github/workflows/deploy-test.yml
+    with:
+      cloud: gcp
