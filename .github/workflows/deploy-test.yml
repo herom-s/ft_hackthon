@@ -1,0 +1,59 @@
+name: Deploy Integration Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'Makefile'
+      - '.github/workflows/deploy-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-test:
+    name: Deploy against floci emulators
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-plugin-cache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: true
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.13.1
+          tofu_wrapper: false
+
+      - name: Cache OpenTofu providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: tofu-providers-${{ hashFiles('terraform/*/.terraform.lock.hcl') }}
+
+      - name: Deploy every cloud module against floci, floci-az and floci-gcp
+        run: make test-deploy
+
+      - name: Emulator logs on failure
+        if: failure()
+        run: docker compose -f terraform/test/docker-compose.yml logs --tail=200
+
+      - name: Stop emulators
+        if: always()
+        run: make floci-down

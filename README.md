@@ -61,7 +61,7 @@ For CI/CD, pass the command as arguments (no prompts): `ft_hackthon --insecure g
 - Leaderboard, analytics, plagiarism detection
 - Parallel grading via auto-scaling worker pool
 - Automatic TLS with Let's Encrypt
-- Deploy to DigitalOcean, AWS, GCP, Azure
+- Deploy to AWS, GCP, Azure
 
 ## Developing
 

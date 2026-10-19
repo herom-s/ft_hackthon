@@ -29,25 +29,28 @@ resource "azurerm_resource_group" "this" {
   location = var.region
 }
 
+# Rules are inline so the NSG is written in one request: separate
+# azurerm_network_security_rule resources update the same NSG concurrently
+# and intermittently fail.
 resource "azurerm_network_security_group" "this" {
   name                = "ft-hackthon"
   location            = azurerm_resource_group.this.location
   resource_group_name = azurerm_resource_group.this.name
-}
 
-resource "azurerm_network_security_rule" "ports" {
-  for_each                    = toset(["22", "80", "8443", "3222"])
-  name                        = "Allow-${each.value}"
-  priority                    = 100 + index(["22", "80", "8443", "3222"], each.value)
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Tcp"
-  source_port_range           = "*"
-  destination_port_range      = each.value
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.this.name
-  network_security_group_name = azurerm_network_security_group.this.name
+  dynamic "security_rule" {
+    for_each = ["22", "80", "8443", "3222"]
+    content {
+      name                       = "Allow-${security_rule.value}"
+      priority                   = 100 + security_rule.key
+      direction                  = "Inbound"
+      access                     = "Allow"
+      protocol                   = "Tcp"
+      source_port_range          = "*"
+      destination_port_range     = security_rule.value
+      source_address_prefix      = "*"
+      destination_address_prefix = "*"
+    }
+  }
 }
 
 resource "azurerm_virtual_network" "this" {
