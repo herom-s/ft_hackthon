@@ -49,14 +49,14 @@ func promptSuiteSelection(sm *client.SubmitManager, ws string) {
 	}
 	suite, err := sm.PromptSuiteSelection()
 	if err != nil {
-		fmt.Printf("[!] Failed to configure test suite: %v\n", err)
+		client.Warnf("Failed to configure test suite: %v", err)
 		return
 	}
 	if suite == "" {
 		return
 	}
 	if err := client.InitWorkspaceRepo(ws, suite); err != nil {
-		fmt.Printf("[!] Failed to push initial setup: %v\n", err)
+		client.Warnf("Failed to push initial setup: %v", err)
 	} else {
 		fmt.Println("Initial setup pushed to Gitea.")
 	}

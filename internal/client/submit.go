@@ -56,9 +56,7 @@ func (sm *SubmitManager) SubmitGradeJob() error {
 		return fmt.Errorf("submission failed: %w", err)
 	}
 
-	fmt.Printf("✓ Job ID: %s\n\n", submitResp.JobID)
-
-	fmt.Println("Waiting for grading to complete...")
+	OKf("Submitted %s", Dim("(job "+submitResp.JobID+")"))
 	return sm.PollStatus(submitResp.JobID)
 }
 
@@ -132,16 +130,16 @@ func (sm *SubmitManager) PromptSuiteSelection() (string, error) {
 		}
 
 		if matched == nil {
-			fmt.Printf("✗ Unknown hackathon %q.\n", input)
+			Failf("Unknown hackathon %q.", input)
 			continue
 		}
 
 		if !matched.Active {
-			fmt.Printf("✗ %q is not accepting submissions: %s\n", input, matched.Message)
+			Failf("%q is not accepting submissions: %s", input, matched.Message)
 			continue
 		}
 
-		fmt.Printf("✓ Registered for %q hackathon. Test suite configured.\n", input)
+		OKf("Registered for %q hackathon. Test suite configured.", input)
 
 		// Download challenge subjects to ~/ft_hackthon/<hackathon>/
 		sm.downloadChallengeSubjects(input)
@@ -160,7 +158,7 @@ func (sm *SubmitManager) downloadChallengeSubjects(suite string) {
 
 	chResp, err := sm.apiClient.GetChallenges(suite)
 	if err != nil {
-		fmt.Printf("[!] Could not fetch challenge subjects: %v\n", err)
+		Warnf("Could not fetch challenge subjects: %v", err)
 		return
 	}
 
@@ -171,57 +169,112 @@ func (sm *SubmitManager) downloadChallengeSubjects(suite string) {
 	for _, ch := range chResp.Challenges {
 		subjectPath := filepath.Join(subjectsDir, ch.Name+".txt")
 		if err := os.WriteFile(subjectPath, []byte(ch.Subject), 0644); err != nil {
-			fmt.Printf("[!] Could not write %s: %v\n", subjectPath, err)
+			Warnf("Could not write %s: %v", subjectPath, err)
 			continue
 		}
 	}
 	fmt.Printf("Challenge subjects saved to ~/ft_hackthon/%s/\n", suite)
 }
 
-// PollStatus continuously polls the API for job status
+// PollStatus waits for a job to finish and prints its result. Updates stream
+// over WebSocket when the server allows it, with HTTP polling as the
+// fallback. In the interactive shell a single live line shows progress;
+// otherwise one line is printed per status change.
 func (sm *SubmitManager) PollStatus(jobID string) error {
-	ticker := time.NewTicker(time.Duration(pollingInterval) * time.Second)
-	defer ticker.Stop()
+	live := newLiveLine()
+	defer live.Stop()
+	if !live.active {
+		fmt.Println("Waiting for grading to complete...")
+	}
+	live.Set("Connecting to the grader…")
 
-	attempt := 0
-	var lastStatus string
+	done := make(chan struct{})
+	defer close(done)
+	var updates <-chan *StatusResponse
+	wsc := sm.apiClient.newWSClient()
+	if ch, err := wsc.Watch(jobID, done); err == nil {
+		updates = ch
+		defer wsc.Close()
+	}
+
+	timeout := time.Duration(maxPollingAttempts*pollingInterval) * time.Second
+	deadline := time.After(timeout)
+	poll := time.NewTicker(time.Duration(pollingInterval) * time.Second)
+	defer poll.Stop()
+	pollNow := make(chan struct{}, 1)
+	if updates == nil {
+		pollNow <- struct{}{}
+	}
+
+	lastStatus := ""
+	unreachable := false
+	handle := func(s *StatusResponse) (bool, error) {
+		if s.Status != lastStatus {
+			lastStatus = s.Status
+			live.Set(getStatusMessage(s.Status))
+			if !live.active && !isTerminalStatus(s.Status) {
+				sm.ui.PrintStatusUpdate(s)
+			}
+		}
+		switch s.Status {
+		case "completed":
+			live.Stop()
+			if s.Result != nil {
+				sm.ui.PrintGradeResult(s.Result)
+			}
+			return true, nil
+		case "failed", "error":
+			live.Stop()
+			Failf("Grading failed: %s", s.Message)
+			return true, reportedError{fmt.Errorf("grading job failed with status: %s", s.Status)}
+		}
+		return false, nil
+	}
+	pollOnce := func() (bool, error) {
+		s, err := sm.apiClient.GetStatus(jobID)
+		if err != nil {
+			if !unreachable {
+				unreachable = true
+				live.Set(Yellow("Lost contact with the server, retrying…"))
+				if !live.active {
+					Warnf("Can't fetch status, retrying: %v", err)
+				}
+			}
+			return false, nil
+		}
+		if unreachable {
+			unreachable = false
+			live.Set(getStatusMessage(s.Status))
+		}
+		return handle(s)
+	}
 
 	for {
+		var pollC <-chan time.Time
+		if updates == nil {
+			pollC = poll.C
+		}
+		var finished bool
+		var err error
 		select {
-		case <-ticker.C:
-			attempt++
-
-			statusResp, err := sm.apiClient.GetStatus(jobID)
-			if err != nil {
-				fmt.Printf("[!] Error fetching status: %v\n", err)
-				if attempt > maxPollingAttempts {
-					return fmt.Errorf("polling timeout: exceeded %d attempts", maxPollingAttempts)
-				}
+		case s, ok := <-updates:
+			if !ok {
+				updates = nil
+				pollNow <- struct{}{}
 				continue
 			}
-
-			if statusResp.Status != lastStatus {
-				lastStatus = statusResp.Status
-				sm.ui.PrintStatusUpdate(statusResp)
-			}
-
-			if statusResp.Status == "completed" {
-				if statusResp.Result != nil {
-					fmt.Println()
-					sm.ui.PrintGradeResult(statusResp.Result)
-				}
-				return nil
-			}
-
-			if statusResp.Status == "failed" || statusResp.Status == "error" {
-				fmt.Printf("\n✗ Grading failed: %s\n", statusResp.Message)
-				return fmt.Errorf("grading job failed with status: %s", statusResp.Status)
-			}
-
-			if attempt > maxPollingAttempts {
-				return fmt.Errorf("polling timeout: exceeded %d attempts (%.0f minutes)",
-					maxPollingAttempts, float64(maxPollingAttempts*pollingInterval)/60)
-			}
+			finished, err = handle(s)
+		case <-pollNow:
+			finished, err = pollOnce()
+		case <-pollC:
+			finished, err = pollOnce()
+		case <-deadline:
+			live.Stop()
+			Failf("Gave up waiting after %s; the job is still queued or running. Check later with 'status %s'.", timeout, jobID)
+			return reportedError{fmt.Errorf("timed out waiting for job %s", jobID)}
+		}
+		if finished {
+			return err
 		}
 	}
 }

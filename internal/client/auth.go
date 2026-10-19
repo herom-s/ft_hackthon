@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"syscall"
 
@@ -43,25 +44,41 @@ func PromptPassword() (string, error) {
 	return string(bytepwd), nil
 }
 
-// Login performs the login flow
-// It prompts for username and password, then authenticates with the API
-func (am *AuthManager) Login() (*LoginResponse, error) {
-	username, err := PromptUsername()
-	if err != nil {
-		return nil, err
+// credentials prompts in the interactive shell; in CI there is no one to
+// answer, so they come from FT_HACKTHON_USERNAME / FT_HACKTHON_PASSWORD.
+func credentials() (string, string, error) {
+	if !Interactive {
+		username, password := os.Getenv("FT_HACKTHON_USERNAME"), os.Getenv("FT_HACKTHON_PASSWORD")
+		if username == "" || password == "" {
+			return "", "", fmt.Errorf("CI mode reads credentials from FT_HACKTHON_USERNAME and FT_HACKTHON_PASSWORD; set both")
+		}
+		return username, password, nil
 	}
 
+	username, err := PromptUsername()
+	if err != nil {
+		return "", "", err
+	}
 	if username == "" {
-		return nil, fmt.Errorf("username cannot be empty")
+		return "", "", fmt.Errorf("username cannot be empty")
 	}
 
 	password, err := PromptPassword()
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
-
 	if password == "" {
-		return nil, fmt.Errorf("password cannot be empty")
+		return "", "", fmt.Errorf("password cannot be empty")
+	}
+	return username, password, nil
+}
+
+// Login performs the login flow
+// It prompts for username and password, then authenticates with the API
+func (am *AuthManager) Login() (*LoginResponse, error) {
+	username, password, err := credentials()
+	if err != nil {
+		return nil, err
 	}
 
 	// Call the API
@@ -71,42 +88,21 @@ func (am *AuthManager) Login() (*LoginResponse, error) {
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
-	// Save the token and Gitea info to config
-	cfg := &config.Config{
-		Token:         resp.Token,
-		User:          resp.User,
-		GiteaCloneURL: resp.GiteaCloneURL,
-		GiteaToken:    resp.GiteaToken,
+	if err := am.saveSession(resp); err != nil {
+		return nil, err
 	}
 
-	if err := config.SaveConfig(cfg); err != nil {
-		return nil, fmt.Errorf("failed to save config: %w", err)
-	}
-
-	fmt.Printf("✓ Successfully logged in as %s\n", resp.User)
-	fmt.Printf("✓ Token saved to ~/.ft_hackthon/config.json\n")
+	OKf("Successfully logged in as %s", resp.User)
+	OKf("Token saved to ~/.ft_hackthon/config.json")
 	return resp, nil
 }
 
 // Register performs the registration flow
 // Similar to Login but creates a new account
 func (am *AuthManager) Register() (*LoginResponse, error) {
-	username, err := PromptUsername()
+	username, password, err := credentials()
 	if err != nil {
 		return nil, err
-	}
-
-	if username == "" {
-		return nil, fmt.Errorf("username cannot be empty")
-	}
-
-	password, err := PromptPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	if password == "" {
-		return nil, fmt.Errorf("password cannot be empty")
 	}
 
 	// For now, we'll assume the API has a /auth/register endpoint
@@ -132,21 +128,30 @@ func (am *AuthManager) Register() (*LoginResponse, error) {
 
 	am.apiClient.SetToken(resp.Token)
 
-	// Save the token and Gitea info to config
+	if err := am.saveSession(&resp); err != nil {
+		return nil, err
+	}
+
+	OKf("Successfully registered as %s", resp.User)
+	OKf("Token saved to ~/.ft_hackthon/config.json")
+	return &resp, nil
+}
+
+// saveSession stores the token and Gitea info together with the server
+// settings that just worked, so later sessions reuse them without flags.
+func (am *AuthManager) saveSession(resp *LoginResponse) error {
 	cfg := &config.Config{
 		Token:         resp.Token,
 		User:          resp.User,
 		GiteaCloneURL: resp.GiteaCloneURL,
 		GiteaToken:    resp.GiteaToken,
+		APIURL:        am.apiClient.baseURL,
+		Insecure:      am.apiClient.insecure,
 	}
-
 	if err := config.SaveConfig(cfg); err != nil {
-		return nil, fmt.Errorf("failed to save config: %w", err)
+		return fmt.Errorf("failed to save config: %w", err)
 	}
-
-	fmt.Printf("✓ Successfully registered as %s\n", resp.User)
-	fmt.Printf("✓ Token saved to ~/.ft_hackthon/config.json\n")
-	return &resp, nil
+	return nil
 }
 
 // Logout clears the stored token
@@ -154,7 +159,7 @@ func (am *AuthManager) Logout() error {
 	if err := config.ClearToken(); err != nil {
 		return fmt.Errorf("failed to logout: %w", err)
 	}
-	fmt.Println("✓ Successfully logged out")
+	OKf("Successfully logged out")
 	return nil
 }
 

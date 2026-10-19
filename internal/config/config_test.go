@@ -15,6 +15,25 @@ func setupTestDir(t *testing.T) string {
 	return tmpDir
 }
 
+func TestClearTokenKeepsServerSettings(t *testing.T) {
+	setupTestDir(t)
+	SaveConfig(&Config{Token: "tok", User: "alice", GiteaToken: "g", APIURL: "https://h/api/v1", Insecure: true})
+
+	if err := ClearToken(); err != nil {
+		t.Fatalf("ClearToken: %v", err)
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Token != "" || cfg.User != "" || cfg.GiteaToken != "" {
+		t.Errorf("expected session cleared, got %+v", cfg)
+	}
+	if cfg.APIURL != "https://h/api/v1" || !cfg.Insecure {
+		t.Errorf("expected server settings kept, got %+v", cfg)
+	}
+}
+
 func TestGetConfigPath(t *testing.T) {
 	home := setupTestDir(t)
 	path, err := GetConfigPath()

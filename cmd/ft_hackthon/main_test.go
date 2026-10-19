@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ft_hackthon/internal/client"
 	"github.com/ft_hackthon/internal/config"
 )
 
@@ -120,6 +121,46 @@ func TestSaveGiteaConfig(t *testing.T) {
 	}
 	if cfg.GiteaToken != "tok123" {
 		t.Errorf("expected token, got %q", cfg.GiteaToken)
+	}
+}
+
+func TestRunCI_ArgumentErrors(t *testing.T) {
+	setupConfig(t)
+	t.Cleanup(func() { client.Interactive = true })
+
+	err := runCI(rootCmd, []string{"grademe", "--json"})
+	if err == nil || !strings.Contains(err.Error(), "must come before the command") {
+		t.Errorf("expected misplaced-flag error, got %v", err)
+	}
+	if client.Interactive {
+		t.Error("expected CI mode to disable interactivity")
+	}
+
+	err = runCI(rootCmd, []string{"bogus"})
+	if err == nil || !strings.Contains(err.Error(), `unknown command "bogus"`) {
+		t.Errorf("expected unknown-command error, got %v", err)
+	}
+}
+
+func TestApplySavedSettings(t *testing.T) {
+	setupConfig(t)
+	prevURL, prevInsecure := apiBaseURL, insecure
+	t.Cleanup(func() {
+		apiBaseURL, insecure = prevURL, prevInsecure
+		rootCmd.PersistentFlags().Lookup("api-url").Changed = false
+	})
+	config.SaveConfig(&config.Config{APIURL: "https://saved.example/api/v1", Insecure: true})
+
+	apiBaseURL, insecure = "https://localhost:8443/api/v1", false
+	applySavedSettings(rootCmd)
+	if apiBaseURL != "https://saved.example/api/v1" || !insecure {
+		t.Errorf("expected saved settings, got %s insecure=%v", apiBaseURL, insecure)
+	}
+
+	rootCmd.PersistentFlags().Set("api-url", "https://flag.example/api/v1")
+	applySavedSettings(rootCmd)
+	if apiBaseURL != "https://flag.example/api/v1" {
+		t.Errorf("explicit --api-url must win over saved settings, got %s", apiBaseURL)
 	}
 }
 

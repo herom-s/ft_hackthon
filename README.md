@@ -52,7 +52,7 @@ ft_hackthon --insecure
 > status
 ```
 
-For CI/CD: `ft_hackthon --non-interactive --insecure grademe`
+For CI/CD, pass the command as arguments (no prompts): `ft_hackthon --insecure grademe`
 
 ## Features
 
