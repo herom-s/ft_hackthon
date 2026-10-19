@@ -484,16 +484,12 @@ func (h *APIHandler) SubmitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Look up user for Gitea clone URL
+	// Look up user for Gitea clone URL. The URL is stored without credentials;
+	// the worker authenticates the clone with the user's token at run time.
 	user, _ := h.db.GetUser(userID)
 	giteaCloneURL := ""
-	if user != nil && user.GiteaRepoURL != "" && user.GiteaToken != "" {
-		giteaCloneURL = strings.Replace(
-			user.GiteaRepoURL,
-			"://",
-			fmt.Sprintf("://%s@", user.GiteaToken),
-			1,
-		)
+	if user != nil {
+		giteaCloneURL = user.GiteaRepoURL
 	}
 
 	// Create job

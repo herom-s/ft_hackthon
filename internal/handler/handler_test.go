@@ -333,7 +333,7 @@ func TestSubmitHandler(t *testing.T) {
 	h, db := setupTest(t)
 
 	// Create a user and their token
-	db.CreateUser(&database.User{ID: "user1", Username: "alice"})
+	db.CreateUser(&database.User{ID: "user1", Username: "alice", GiteaRepoURL: "http://gitea/org/alice.git", GiteaToken: "secret-gitea-token"})
 	db.CreateToken("testuser12", "user1")
 
 	t.Run("POST with valid request", func(t *testing.T) {
@@ -355,6 +355,14 @@ func TestSubmitHandler(t *testing.T) {
 		}
 		if resp.Status != database.JobStatusQueued {
 			t.Errorf("expected queued, got %s", resp.Status)
+		}
+
+		job, err := db.GetJob(resp.JobID)
+		if err != nil {
+			t.Fatalf("get job: %v", err)
+		}
+		if job.GiteaCloneURL != "http://gitea/org/alice.git" {
+			t.Errorf("expected credential-free clone URL, got %s", job.GiteaCloneURL)
 		}
 	})
 

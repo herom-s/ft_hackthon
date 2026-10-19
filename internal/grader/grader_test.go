@@ -149,6 +149,7 @@ func TestListSuites(t *testing.T) {
 }
 
 func TestGrade_WithExplicitConfig(t *testing.T) {
+	t.Setenv(allowUnsandboxedEnv, "true")
 	suiteRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(suiteRoot, "my-tester"), 0755)
 	os.WriteFile(filepath.Join(suiteRoot, "my-tester", "suite.yml"), []byte("name: my-tester\nbuild: 'gcc -o {binary} {suite_files} {workspace_files} -lm'\nrun: '{binary}'\n"), 0644)
@@ -177,6 +178,7 @@ int main() {
 }
 
 func TestGrade_WorkspaceConfigFallsBack(t *testing.T) {
+	t.Setenv(allowUnsandboxedEnv, "true")
 	suiteRoot := createSuiteRoot(t, "fallback", "needed.h",
 		"name: fallback\nlanguage: c\ndetect: [needed.h]\nbuild: 'gcc -o {binary} {suite_files} {workspace_files} -lm'\nrun: '{binary}'\n",
 		`int main(){return 0;}`)
@@ -351,6 +353,7 @@ func TestLoadSuite_MissingFile(t *testing.T) {
 }
 
 func TestGrade_Passing(t *testing.T) {
+	t.Setenv(allowUnsandboxedEnv, "true")
 	root := t.TempDir()
 	suiteDir := filepath.Join(root, "test")
 	os.MkdirAll(suiteDir, 0755)
@@ -382,6 +385,7 @@ int main() {
 }
 
 func TestGrade_Failing(t *testing.T) {
+	t.Setenv(allowUnsandboxedEnv, "true")
 	root := t.TempDir()
 	suiteDir := filepath.Join(root, "test")
 	os.MkdirAll(suiteDir, 0755)
@@ -409,6 +413,32 @@ int main() {
 	}
 	if result.FinalScore != 0 {
 		t.Errorf("expected score 0, got %d", result.FinalScore)
+	}
+}
+
+func TestGrade_RefusesUnsandboxedSuite(t *testing.T) {
+	t.Setenv(allowUnsandboxedEnv, "")
+	root := t.TempDir()
+	suiteDir := filepath.Join(root, "test")
+	os.MkdirAll(suiteDir, 0755)
+	marker := filepath.Join(root, "ran")
+	// If the suite were executed, the build step would create the marker file.
+	os.WriteFile(filepath.Join(suiteDir, "suite.yml"), []byte("name: test\nbuild: 'touch "+marker+"'\nrun: 'true'\n"), 0644)
+	SetSuitesPath(root)
+	defer SetSuitesPath("")
+
+	result := Grade(t.TempDir(), "test")
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if result.ParserSuccess {
+		t.Error("expected failure for suite without Dockerfile")
+	}
+	if !strings.Contains(result.Details, "no Dockerfile") {
+		t.Errorf("expected sandbox refusal, got: %s", result.Details)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("suite commands ran on the host despite missing Dockerfile")
 	}
 }
 

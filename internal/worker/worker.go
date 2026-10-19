@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -213,6 +214,32 @@ func (w *Worker) processJob(job *database.Job) {
 		job.ID, result.ParserSuccess, result.FinalScore)
 }
 
+// gitAuthEnv returns the environment for cloning a user's repo. The user's
+// Gitea token is sent as an HTTP auth header through git's GIT_CONFIG_*
+// variables, so it never appears in the stored clone URL, the git argv, or
+// git's error output (which is saved into job results).
+func (w *Worker) gitAuthEnv(userID string) []string {
+	env := os.Environ()
+	if w.db == nil || userID == "" {
+		return env
+	}
+	user, err := w.db.GetUser(userID)
+	if err != nil {
+		log.Printf("Gitea auth: lookup user %s: %v", userID, err)
+		return env
+	}
+	if user == nil || user.GiteaToken == "" {
+		return env
+	}
+	// Gitea accepts an access token as the basic-auth username with an empty password.
+	cred := base64.StdEncoding.EncodeToString([]byte(user.GiteaToken + ":"))
+	return append(env,
+		"GIT_CONFIG_COUNT=1",
+		"GIT_CONFIG_KEY_0=http.extraHeader",
+		"GIT_CONFIG_VALUE_0=Authorization: Basic "+cred,
+	)
+}
+
 // gradeProject clones the repo from Gitea and runs the matching test suite
 func (w *Worker) gradeProject(job *database.Job) *database.Result {
 	// Create temp directory for cloning
@@ -236,6 +263,7 @@ func (w *Worker) gradeProject(job *database.Job) *database.Result {
 
 	cloneDir := filepath.Join(tmpDir, "repo")
 	cmd := exec.Command("git", "clone", cloneURL, cloneDir)
+	cmd.Env = w.gitAuthEnv(job.UserID)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return &database.Result{
 			ParserSuccess: false,

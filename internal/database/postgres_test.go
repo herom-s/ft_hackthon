@@ -929,9 +929,9 @@ func TestMigrate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
-		// exec count = 1 (ensure table) + 6 (migrations SQL) + 6 (record each) = 13
-		if execCount != 13 {
-			t.Errorf("expected 13 exec calls, got %d", execCount)
+		// exec count = 1 (ensure table) + 7 (migrations SQL) + 7 (record each) = 15
+		if execCount != 15 {
+			t.Errorf("expected 15 exec calls, got %d", execCount)
 		}
 	})
 
@@ -963,9 +963,9 @@ func TestMigrate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
-		// exec count = 1 (ensure table) + 3 (migrations 4+5+6 SQL) + 3 (record 4+5+6) = 7
-		if execCount != 7 {
-			t.Errorf("expected 7 exec calls, got %d", execCount)
+		// exec count = 1 (ensure table) + 4 (migrations 4-7 SQL) + 4 (record 4-7) = 9
+		if execCount != 9 {
+			t.Errorf("expected 9 exec calls, got %d", execCount)
 		}
 	})
 
