@@ -41,7 +41,7 @@ This starts six services: traefik (TLS + Let's Encrypt), api (REST + WebSocket),
 
 | Service | Internal | External (via VM port forwards) |
 |---------|----------|----------------------------------|
-| traefik | :80 (HTTP→HTTPS), :8443 (TLS) | :80 redirects to TLS, :8343 (HTTPS) |
+| traefik | :80 (HTTP→HTTPS), :8443 (TLS) | :80 redirects to TLS, :8443 (HTTPS) |
 | api | :8000 | — |
 | postgres | :5432 | — |
 | gitea | :3000 | :3222 |
@@ -80,7 +80,7 @@ auto-provisions a Let's Encrypt certificate.
 
 ```bash
 make deploy
-ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1
+ft_hackthon --api-url https://hackthon.yourdomain.com:8443/api/v1
 > login
 ```
 
@@ -94,14 +94,14 @@ ft_hackthon --api-url https://hackthon.yourdomain.com:8343/api/v1
 
 **User Command:**
 ```bash
-$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1
+$ ft_hackthon --insecure --api-url https://c1r2p4:8443/api/v1
 > register
 Username: alice
 Password: ************
 Confirm: ************
 + Account created. You can now log in.
 
-$ ft_hackthon --insecure --api-url https://c1r2p4:8343/api/v1
+$ ft_hackthon --insecure --api-url https://c1r2p4:8443/api/v1
 > login
 Username: alice
 Password: ************

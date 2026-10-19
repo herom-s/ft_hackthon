@@ -21,7 +21,8 @@ type Config struct {
 	GiteaToken    string `json:"gitea_token,omitempty"`
 }
 
-// ConfigDir returns the config directory path (panics on error, safe for runtime)
+// ConfigDir returns the config directory path, falling back to a directory
+// under os.TempDir() when the home directory cannot be determined.
 func ConfigDir() string {
 	p, err := GetConfigPath()
 	if err != nil {

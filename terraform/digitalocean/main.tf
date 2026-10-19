@@ -45,7 +45,7 @@ resource "digitalocean_firewall" "this" {
   }
   inbound_rule {
     protocol         = "tcp"
-    port_range       = "8343"
+    port_range       = "8443"
     source_addresses = ["0.0.0.0/0"]
   }
   inbound_rule {
@@ -98,5 +98,5 @@ output "ssh_command" {
 }
 
 output "api_url" {
-  value = var.domain != "" ? "https://${var.domain}:8343/api/v1" : "https://${digitalocean_droplet.this.ipv4_address}:8343/api/v1"
+  value = var.domain != "" ? "https://${var.domain}:8443/api/v1" : "https://${digitalocean_droplet.this.ipv4_address}:8443/api/v1"
 }

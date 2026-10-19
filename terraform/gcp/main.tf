@@ -26,7 +26,7 @@ resource "google_compute_firewall" "this" {
   network = "default"
   allow {
     protocol = "tcp"
-    ports    = ["22", "80", "8342", "8343", "3222"]
+    ports    = ["22", "80", "8443", "3222"]
   }
   source_ranges = ["0.0.0.0/0"]
 }
@@ -60,5 +60,5 @@ output "ssh_command" {
 }
 
 output "api_url" {
-  value = "https://${google_compute_instance.this.network_interface[0].access_config[0].nat_ip}:8343/api/v1"
+  value = "https://${google_compute_instance.this.network_interface[0].access_config[0].nat_ip}:8443/api/v1"
 }

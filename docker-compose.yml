@@ -164,7 +164,6 @@ services:
         condition: service_healthy
     environment:
       - WORKER_ID=${WORKER_ID:-worker-1}
-      - API_URL=http://api:8000
       - DATABASE_URL=postgres://${POSTGRES_USER:-ft_hackthon}:${POSTGRES_PASSWORD:-ft_hackthon}@postgres:5432/${POSTGRES_DB:-ft_hackthon}?sslmode=disable
       - TESTSUITES_PATH=/var/ft_hackthon/testsuites
       - GITEA_URL=http://gitea:3000

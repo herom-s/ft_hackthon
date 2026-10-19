@@ -20,7 +20,7 @@ func LoadServerConfig() *ServerConfig {
 		TestSuitesPath:     getEnv("TESTSUITES_PATH", "/var/ft_hackthon/testsuites"),
 		GiteaURL:           getEnv("GITEA_URL", "http://gitea:3000"),
 		GiteaPublicURL:     getEnv("GITEA_PUBLIC_URL", "http://localhost:3000"),
-		GiteaOrg:           getEnv("GITEA_ORG", "moulinerie"),
+		GiteaOrg:           getEnv("GITEA_ORG", "ft_hackthon"),
 		GiteaAdminUser:     getEnv("GITEA_ADMIN_USER", "ft_hackthon"),
 		GiteaAdminPassword: getEnv("GITEA_ADMIN_PASSWORD", ""),
 	}

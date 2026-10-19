@@ -43,8 +43,8 @@ resource "aws_vpc_security_group_ingress_rule" "http" {
 resource "aws_vpc_security_group_ingress_rule" "main" {
   security_group_id = aws_security_group.this.id
   cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 8342
-  to_port           = 8343
+  from_port         = 8443
+  to_port           = 8443
   ip_protocol       = "tcp"
 }
 
@@ -90,5 +90,5 @@ output "ssh_command" {
 }
 
 output "api_url" {
-  value = "https://${aws_instance.this.public_ip}:8343/api/v1"
+  value = "https://${aws_instance.this.public_ip}:8443/api/v1"
 }

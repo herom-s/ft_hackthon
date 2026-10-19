@@ -193,8 +193,8 @@ func TestLoadServerConfig_defaults(t *testing.T) {
 	if cfg.GiteaPublicURL != "http://localhost:3000" {
 		t.Errorf("expected http://localhost:3000, got %s", cfg.GiteaPublicURL)
 	}
-	if cfg.GiteaOrg != "moulinerie" {
-		t.Errorf("expected moulinerie, got %s", cfg.GiteaOrg)
+	if cfg.GiteaOrg != "ft_hackthon" {
+		t.Errorf("expected ft_hackthon, got %s", cfg.GiteaOrg)
 	}
 	if cfg.GiteaAdminUser != "ft_hackthon" {
 		t.Errorf("expected ft_hackthon, got %s", cfg.GiteaAdminUser)

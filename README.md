@@ -5,20 +5,20 @@ A self-hosted grading platform for hackathons. Students push code, the platform 
 ## How it works
 
 ```
-┌──────────┐   submit    ┌──────┐  poll   ┌──────────┐
-│  CLI      │──────────▶ │ API  │◀───────│  Worker   │
-│ (student) │  status◀───│      │  jobs  │ (grader) │
-└──────────┘  WebSocket  └──┬───┘        └──────────┘
-                            │
-                     ┌──────┴──────┐
-                     │  PostgreSQL  │
-                     │  + Gitea    │
-                     └─────────────┘
+┌───────────┐  submit   ┌──────┐  enqueue  ┌────────────┐  claim jobs  ┌──────────┐
+│  CLI      │─────────▶ │ API  │─────────▶ │ PostgreSQL │◀──────────── │  Worker  │
+│ (student) │ ◀──────── │      │ ◀──────── │            │  save result │ (grader) │
+└───────────┘  status / └──┬───┘   read    └────────────┘ ───────────▶ └────┬─────┘
+               WebSocket   │ provision repo                                │ git clone
+                           ▼                                               ▼
+                     ┌───────────────────────────────────────────────────────┐
+                     │                         Gitea                         │
+                     └───────────────────────────────────────────────────────┘
 ```
 
 - **CLI** — interactive shell for login, submission, status, leaderboard
 - **API** — REST + WebSocket server (auth, grading, user management)
-- **Worker** — polls the API for grading jobs, runs test suites, records results
+- **Worker** — claims queued jobs directly from PostgreSQL, clones the commit from Gitea, runs the suite in a Docker sandbox, records results (it never calls the API)
 - **Traefik** — reverse proxy with automatic Let's Encrypt TLS
 - **Gitea** — hosts student repositories, auto-created per registration
 - **Test suites** — YAML-defined build/run steps with multi-challenge support

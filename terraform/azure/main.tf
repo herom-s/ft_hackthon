@@ -36,9 +36,9 @@ resource "azurerm_network_security_group" "this" {
 }
 
 resource "azurerm_network_security_rule" "ports" {
-  for_each                    = toset(["22", "80", "8343", "3222"])
+  for_each                    = toset(["22", "80", "8443", "3222"])
   name                        = "Allow-${each.value}"
-  priority                    = 100 + index(["22", "80", "8343", "3222"], each.value)
+  priority                    = 100 + index(["22", "80", "8443", "3222"], each.value)
   direction                   = "Inbound"
   access                      = "Allow"
   protocol                    = "Tcp"
@@ -122,5 +122,5 @@ output "ssh_command" {
 }
 
 output "api_url" {
-  value = "https://${azurerm_public_ip.this.ip_address}:8343/api/v1"
+  value = "https://${azurerm_public_ip.this.ip_address}:8443/api/v1"
 }

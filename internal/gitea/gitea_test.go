@@ -16,8 +16,8 @@ func TestNewClient(t *testing.T) {
 	if c.baseURL != "http://gitea:3000" {
 		t.Errorf("expected baseURL, got %s", c.baseURL)
 	}
-	if c.org != "moulinerie" {
-		t.Errorf("expected moulinerie, got %s", c.org)
+	if c.org != "ft_hackthon" {
+		t.Errorf("expected ft_hackthon, got %s", c.org)
 	}
 }
 
